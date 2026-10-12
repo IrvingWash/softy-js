@@ -1,4 +1,5 @@
 import { vec2, vec3 } from "gl-matrix";
+
 import { type ICanvas } from "./icanvas";
 
 interface FrameBuffer {
@@ -8,11 +9,15 @@ interface FrameBuffer {
 
 export class Renderer {
     private _canvas: ICanvas;
+    private _cachedCanvasSize: vec2;
+
     private _frameBuffer: FrameBuffer;
     private _clearColor: vec3 = [0, 0, 0];
 
     public constructor(canvas: ICanvas, clearColor: vec3 = [0, 0, 0]) {
         this._canvas = canvas;
+        this._cachedCanvasSize = this._canvas.getPixelSize();
+
         this._frameBuffer = this._createFrameBuffer();
         this._clearColor = clearColor;
     }
@@ -28,7 +33,7 @@ export class Renderer {
     }
 
     public drawPixel(position: vec2, color: vec3): void {
-        const [width] = this._canvas.getPixelSize(); // @Todo: use width from cache
+        const [width] = this._cachedCanvasSize;
 
         this._frameBuffer.colors[position[1] * width + position[0]] = rgba(color);
     }
@@ -40,7 +45,7 @@ export class Renderer {
     private _createFrameBuffer(): FrameBuffer {
         const ctx = this._canvas.getContext();
 
-        const [width, height] = this._canvas.getPixelSize();
+        const [width, height] = this._cachedCanvasSize;
 
         const image = ctx.createImageData(width, height);
         const colorBuffer = new Uint32Array(image.data.buffer);
