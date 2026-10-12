@@ -15,4 +15,6 @@ Currently it can:
 - Draw lines
 - Draw filled triangles and triangle "wireframes"
 - Load OBJ files
+- Render wireframe 3D meshes
 - Render flat shaded 3D meshes
+- Backface culling

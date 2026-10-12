@@ -3,15 +3,23 @@ import {
     Vector2,
     Vector3,
     Vector4,
+    calculateFaceNormal,
+    dotProduct,
     makeMatrix4Identity,
     makePerspectiveProjectionMatrix,
     multiplyMatrix4AndVector3,
     projectVectorPerspective,
+    subtractVector3s,
 } from "./math";
 
 export enum PolygonMode {
     Filled = "Filled",
     Wireframe = "Wireframe",
+}
+
+export enum CullMode {
+    BackFace = "BackFace",
+    None = "None",
 }
 
 interface ICanvas {
@@ -26,6 +34,7 @@ interface FrameBuffer {
 
 interface Face {
     vertexIndices: Vector3;
+    normalIndices: Vector3;
 }
 
 interface Camera {
@@ -44,6 +53,7 @@ export class Renderer {
     private _projectionMatrix: Matrix4 = makeMatrix4Identity();
 
     private _polygonMode: PolygonMode = PolygonMode.Filled;
+    private _cullMode: CullMode = CullMode.BackFace;
 
     public constructor(canvas: ICanvas, clearColor: Vector3 = [0, 0, 0]) {
         this._canvas = canvas;
@@ -70,7 +80,7 @@ export class Renderer {
         ctx.putImageData(this._frameBuffer.image, 0, 0);
     }
 
-    public setPolygonMode(mode: PolygonMode) {
+    public setPolygonMode(mode: PolygonMode): void {
         this._polygonMode = mode;
     }
 
@@ -78,26 +88,61 @@ export class Renderer {
         return this._polygonMode;
     }
 
-    public draw(vertices: Vector3[], faces: Face[], modelTransform: Matrix4): void {
-        const transformed = vertices.map(
-            (vertex) => multiplyMatrix4AndVector3(modelTransform, vertex)
-        );
+    public setCullMode(mode: CullMode): void {
+        this._cullMode = mode;
+    }
 
-        const projected = transformed.map(
-            (vertex) => projectVectorPerspective(
-                this._projectionMatrix,
-                [
-                    vertex[0],
-                    vertex[1],
-                    vertex[2],
-                ],
-            )
-        );
+    public getCullMode(): CullMode {
+        return this._cullMode;
+    }
+
+    public draw(vertices: Vector3[], faces: Face[], modelTransform: Matrix4): void {
+        const verticesToRender: [Vector4, Vector4, Vector4][] = [];
 
         for (const face of faces) {
-            const a = projected[face.vertexIndices[0]];
-            const b = projected[face.vertexIndices[1]];
-            const c = projected[face.vertexIndices[2]];
+            const a = vertices[face.vertexIndices[0]];
+            const b = vertices[face.vertexIndices[1]];
+            const c = vertices[face.vertexIndices[2]];
+
+            const aTransformed = multiplyMatrix4AndVector3(modelTransform, a);
+            const bTransformed = multiplyMatrix4AndVector3(modelTransform, b);
+            const cTransformed = multiplyMatrix4AndVector3(modelTransform, c);
+
+            const faceNormal = calculateFaceNormal(
+                [aTransformed[0], aTransformed[1], aTransformed[2]],
+                [bTransformed[0], bTransformed[1], bTransformed[2]],
+                [cTransformed[0], cTransformed[1], cTransformed[2]],
+            );
+
+            switch (this._cullMode) {
+                case CullMode.BackFace:
+                    const originRay = subtractVector3s(
+                        [0, 0, 0],
+                        [aTransformed[0], aTransformed[1], aTransformed[2]],
+                    );
+                    const alignment = dotProduct(faceNormal, originRay);
+
+                    if (alignment <= 0) {
+                        continue;
+                    }
+
+                    break;
+                case CullMode.None:
+                    // Do nothing
+                    break;
+                default:
+                    exhaustiveCheck(this._cullMode);
+            }
+
+            const aProjected = projectVectorPerspective(this._projectionMatrix, [aTransformed[0], aTransformed[1], aTransformed[2]]);
+            const bProjected = projectVectorPerspective(this._projectionMatrix, [bTransformed[0], bTransformed[1], bTransformed[2]]);
+            const cProjected = projectVectorPerspective(this._projectionMatrix, [cTransformed[0], cTransformed[1], cTransformed[2]]);
+
+            verticesToRender.push([aProjected, bProjected, cProjected]);
+        }
+
+        for (const vertices of verticesToRender) {
+            const [a, b, c] = vertices;
 
             switch (this._polygonMode) {
                 case PolygonMode.Filled:

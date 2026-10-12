@@ -1,5 +1,5 @@
 import { Canvas } from "./canvas";
-import { PolygonMode, Renderer } from "./renderer";
+import { CullMode, PolygonMode, Renderer } from "./renderer";
 import { ObjData, parseObj } from "./obj-parser";
 
 import {
@@ -96,25 +96,49 @@ class App {
         menuWrapper.style.padding = "5px";
         document.body.appendChild(menuWrapper);
 
-        const polygonModeLabel = document.createElement("label");
-        polygonModeLabel.innerText = "Polygon mode"
-        polygonModeLabel.style.marginRight = "5px";
-        menuWrapper.appendChild(polygonModeLabel);
+        { // Polygon mode
+            const polygonModeLabel = document.createElement("label");
+            polygonModeLabel.innerText = "Polygon mode"
+            polygonModeLabel.style.marginRight = "5px";
+            menuWrapper.appendChild(polygonModeLabel);
 
-        const polygonModeDropDown = document.createElement("select");
-        menuWrapper.appendChild(polygonModeDropDown);
+            const polygonModeDropDown = document.createElement("select");
+            menuWrapper.appendChild(polygonModeDropDown);
 
-        for (const variant of Object.values(PolygonMode)) {
-            const option = document.createElement("option");
-            option.value = variant;
-            option.innerText = variant;
-            
-            polygonModeDropDown.appendChild(option);
+            for (const variant of Object.values(PolygonMode)) {
+                const option = document.createElement("option");
+                option.value = variant;
+                option.innerText = variant;
+                
+                polygonModeDropDown.appendChild(option);
+            }
+
+            polygonModeDropDown.value = this._renderer.getPolygonMode();
+
+            polygonModeDropDown.addEventListener("change", () => this._renderer.setPolygonMode(polygonModeDropDown.value as PolygonMode));
         }
 
-        polygonModeDropDown.value = this._renderer.getPolygonMode();
+        { // Cull mode
+            const cullModeLabel = document.createElement("label");
+            cullModeLabel.innerText = "Cull mode"
+            cullModeLabel.style.marginRight = "5px";
+            menuWrapper.appendChild(cullModeLabel);
 
-        polygonModeDropDown.addEventListener("change", () => this._renderer.setPolygonMode(polygonModeDropDown.value as PolygonMode));
+            const cullModeDropDown = document.createElement("select");
+            menuWrapper.appendChild(cullModeDropDown);
+
+            for (const variant of Object.values(CullMode)) {
+                const option = document.createElement("option");
+                option.value = variant;
+                option.innerText = variant;
+                
+                cullModeDropDown.appendChild(option);
+            }
+
+            cullModeDropDown.value = this._renderer.getCullMode();
+
+            cullModeDropDown.addEventListener("change", () => this._renderer.setCullMode(cullModeDropDown.value as CullMode));
+        }
     }
 
     public async init(): Promise<void> {
