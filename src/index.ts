@@ -13,7 +13,6 @@ import {
     makeRotationAroundZMatrix,
 } from "./math";
 
-const CLEAR_COLOR: Vector3 = [0, 0, 255];
 const SECONDS_IN_MILLISECOND = 1 / 1000;
 
 async function main(): Promise<void> {
@@ -40,9 +39,9 @@ class Entity {
     }
 
     public update(deltaTime: number) {
-        this.rotation[0] += 0.5 * deltaTime;
-        this.rotation[1] += 0.5 * deltaTime;
-        this.rotation[2] += 0.5 * deltaTime;
+        this.rotation[0] += 0.25 * deltaTime;
+        this.rotation[1] += 0.25 * deltaTime;
+        this.rotation[2] += 0.25 * deltaTime;
     }
 
     public getModelTransform(): Matrix4 {
@@ -69,11 +68,14 @@ class App {
         color: [ 125, 125, 125 ],
         direction: [0, 0, 1],
     };
+    private _clearColor: Vector3 = [70, 70, 70];
+
+    private _isGuiVisible: boolean = true;
 
     public constructor() {
         const canvas = Canvas.createFullscreen();
 
-        this._renderer = new Renderer(canvas, CLEAR_COLOR);
+        this._renderer = new Renderer(canvas, this._clearColor);
 
         this._camera = {
             fov: 1.047198, // 60 degrees
@@ -139,7 +141,7 @@ class App {
         return objData;
     }
 
-    private _createGui() {
+    private _createGui() { // This is a dumpster...
         const menuWrapper = document.createElement("div");
         menuWrapper.style.zIndex = "999";
         menuWrapper.style.position = "absolute";
@@ -151,6 +153,32 @@ class App {
         document.body.appendChild(menuWrapper);
 
         const menuItemWrapperMargin = "0 0 5px 0";
+
+        { // Const hide/unhide
+            const button = document.createElement("button");
+            button.style.width = "40px";
+            button.innerText = "Hide";
+            button.id = "hideButton";
+
+            menuWrapper.appendChild(button);
+
+            button.addEventListener("click", () => {
+                for (const child of menuWrapper.children) {
+                    if (this._isGuiVisible) {
+                        if (child.id == "hideButton") {
+                            continue;
+                        }
+
+                        button.innerText = "Show";
+                        child.style.display = "none";
+                    } else {
+                        child.style.display = "flex";
+                    }
+                }
+
+                this._isGuiVisible = !this._isGuiVisible;
+            });
+        }
 
         { // Polygon mode
             const polygonModeWrapper = document.createElement("div");

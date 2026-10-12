@@ -18,3 +18,4 @@ Currently it can:
 - Render wireframe 3D meshes
 - Render flat shaded 3D meshes
 - Backface culling
+- Simple directional light
