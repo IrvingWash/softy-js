@@ -1,9 +1,9 @@
-import { vec3 } from "gl-matrix";
+import { vec2, vec3 } from "gl-matrix";
 import { type ICanvas } from "./icanvas";
 
 interface FrameBuffer {
     image: ImageData;
-    colorBuffer: Uint32Array;
+    colors: Uint32Array;
 }
 
 export class Renderer {
@@ -17,16 +17,24 @@ export class Renderer {
         this._clearColor = clearColor;
     }
 
-    public renderFrame(): void {
-        const ctx = this._canvas.getContext();
-
+    public startDrawing(): void {
         this._clearFrameBuffer();
+    }
+
+    public finishDrawing(): void {
+        const ctx = this._canvas.getContext();
 
         ctx.putImageData(this._frameBuffer.image, 0, 0);
     }
 
+    public drawPixel(position: vec2, color: vec3): void {
+        const [width] = this._canvas.getPixelSize(); // @Todo: use width from cache
+
+        this._frameBuffer.colors[position[1] * width + position[0]] = rgba(color);
+    }
+
     private _clearFrameBuffer() {
-        this._frameBuffer.colorBuffer.fill(rgba(this._clearColor[0], this._clearColor[1], this._clearColor[2]));
+        this._frameBuffer.colors.fill(rgba(this._clearColor));
     }
 
     private _createFrameBuffer(): FrameBuffer {
@@ -39,11 +47,13 @@ export class Renderer {
 
         return {
             image,
-            colorBuffer,
+            colors: colorBuffer,
         };
     }
 }
 
-function rgba(r: number, g: number, b: number, a = 255) {
-  return (a << 24) | (b << 16) | (g << 8) | r;
+function rgba(color: vec3, a: number = 255): number {
+    const [r, g, b] = color;
+
+    return (a << 24) | (b << 16) | (g << 8) | r;
 }

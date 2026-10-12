@@ -20,10 +20,18 @@ class App {
 
     public run(): void {
         window.requestAnimationFrame(() => {
-            this._renderer.renderFrame();
+            this._render();
 
             this.run();
         });
+    }
+
+    private _render(): void {
+        this._renderer.startDrawing();
+
+        this._renderer.drawPixel([100, 100], [255, 0, 0]);
+
+        this._renderer.finishDrawing();
     }
 }
 
