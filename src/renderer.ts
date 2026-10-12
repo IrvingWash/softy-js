@@ -35,7 +35,7 @@ export class Renderer {
     public drawPixel(position: vec2, color: vec3): void {
         const [width] = this._cachedCanvasSize;
 
-        this._frameBuffer.colors[position[1] * width + position[0]] = rgba(color);
+        this._frameBuffer.colors[position[1] * width + position[0]] = toCanvasColorFormat(color);
     }
 
     public drawFilledRectangle(position: vec2, size: vec2, color: vec3): void {
@@ -49,8 +49,33 @@ export class Renderer {
         }
     }
 
-    private _clearFrameBuffer() {
-        this._frameBuffer.colors.fill(rgba(this._clearColor));
+    public drawLine(start: vec2, end: vec2, color: vec3): void {
+        const [startX, startY] = start;
+        const [endX, endY] = end;
+
+        const deltaX = endX - startX;
+        const deltaY = endY - startY;
+
+        const longestSideLength = Math.abs(deltaX) >= Math.abs(deltaY)
+            ? Math.abs(deltaX)
+            : Math.abs(deltaY);
+
+        const xStep = deltaX / longestSideLength;
+        const yStep = deltaY / longestSideLength;
+
+        let currentX = startX;
+        let currentY = startY;
+
+        for (let i = 0; i <= longestSideLength; i++) {
+            this.drawPixel([currentX, currentY], color);
+
+            currentX += xStep;
+            currentY += yStep;
+        }
+    }
+
+    private _clearFrameBuffer(): void {
+        this._frameBuffer.colors.fill(toCanvasColorFormat(this._clearColor));
     }
 
     private _createFrameBuffer(): FrameBuffer {
@@ -68,7 +93,8 @@ export class Renderer {
     }
 }
 
-function rgba(color: vec3, a: number = 255): number {
+// RGBA to AABBGGRR
+function toCanvasColorFormat(color: vec3, a: number = 255): number {
     const [r, g, b] = color;
 
     return (a << 24) | (b << 16) | (g << 8) | r;

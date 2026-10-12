@@ -30,6 +30,7 @@ class App {
         this._renderer.startDrawing();
 
         this._renderer.drawFilledRectangle([100, 100], [100, 100], [255, 0, 0]);
+        this._renderer.drawLine([300, 300], [600, 600], [0, 255, 0]);
 
         this._renderer.finishDrawing();
     }
