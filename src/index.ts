@@ -1,7 +1,7 @@
 import { Canvas } from "./canvas";
 import { Renderer } from "./renderer";
 import { ObjData, parseObj } from "./obj-parser";
-import { Vector3 } from "./math";
+import { Vector3, makeTranslationMatrix, makeScaleMatrix, multiplyMatrix4s } from "./math";
 
 const CLEAR_COLOR: Vector3 = [0, 0, 255];
 const SECONDS_IN_MILLISECOND = 1 / 1000;
@@ -21,6 +21,9 @@ interface Camera {
 }
 
 interface Entity {
+    position: Vector3;
+    scale: Vector3;
+
     objData: ObjData
 }
 
@@ -47,6 +50,8 @@ class App {
 
     public async init(): Promise<void> {
         this._entity = {
+            position: [0, 0, 10],
+            scale: [2, 2, 2],
             objData: await this._loadModel("assets/models/f22.obj"),
         }
     }
@@ -69,7 +74,11 @@ class App {
         // this._renderer.drawTriangle([500, 500], [750, 750], [250, 750], [255, 0, 0]);
         // this._renderer.drawFilledTriangle([800, 100], [900, 300], [800, 500], [255, 0, 0]);
         if (this._entity) {
-            this._renderer.drawMesh(this._entity.objData.vertices, this._entity.objData.faces);
+            this._renderer.drawMesh(
+                this._entity.objData.vertices,
+                this._entity.objData.faces,
+                multiplyMatrix4s(makeTranslationMatrix(this._entity.position), makeScaleMatrix(this._entity.scale)),
+            );
         }
 
         this._renderer.finishDrawing();

@@ -47,6 +47,21 @@ export function makePerspectiveProjectionMatrix(
     return matrix;
 }
 
+export function multiplyMatrix4s(a: Matrix4, b: Matrix4): Matrix4 {
+    const result = makeEmptyMatrix4();
+
+    for (let i = 0; i <= 3; i++) {
+        for (let j = 0; j <= 3; j++) {
+            result[i][j] = a[i][0] * b[0][j]
+                + a[i][1] * b[1][j]
+                + a[i][2] * b[2][j]
+                + a[i][3] * b[3][j];
+        }
+    }
+
+    return result;
+}
+
 export function multiplyMatrix4AndVector3(m: Matrix4, v: Vector3): Vector4 {
     const result = makeEmptyVector4();
 
@@ -68,6 +83,38 @@ export function projectVectorPerspective(matrix: Matrix4, vector: Vector3): Vect
     }
 
     return result;
+}
+
+/*
+| sx 0  0  0 |
+| 0  sy 0  0 |
+| 0  0  sz 0 |
+| 0  0  0  1 |
+*/
+export function makeScaleMatrix(v: Vector3): Matrix4 {
+    const matrix = makeMatrix4Identity();
+
+    matrix[0][0] = v[0];
+    matrix[1][1] = v[1];
+    matrix[2][2] = v[2];
+
+    return matrix;
+}
+
+/*
+| 1 0 0 tx |
+| 0 1 0 ty |
+| 0 0 1 tz |
+| 0 0 0  1 |
+*/
+export function makeTranslationMatrix(v: Vector3): Matrix4 {
+    const matrix = makeMatrix4Identity();
+
+    matrix[0][3] = v[0];
+    matrix[1][3] = v[1];
+    matrix[2][3] = v[2];
+
+    return matrix;
 }
 
 function makeEmptyMatrix4(): Matrix4 {

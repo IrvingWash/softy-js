@@ -5,6 +5,7 @@ import {
     Vector4,
     makeMatrix4Identity,
     makePerspectiveProjectionMatrix,
+    multiplyMatrix4AndVector3,
     projectVectorPerspective,
 } from "./math";
 
@@ -62,14 +63,18 @@ export class Renderer {
         ctx.putImageData(this._frameBuffer.image, 0, 0);
     }
 
-    public drawMesh(vertices: Vector3[], faces: Face[]): void {
-        const projected = vertices.map(
+    public drawMesh(vertices: Vector3[], faces: Face[], modelTransform: Matrix4): void {
+        const transformed = vertices.map(
+            (vertex) => multiplyMatrix4AndVector3(modelTransform, vertex)
+        );
+
+        const projected = transformed.map(
             (vertex) => projectVectorPerspective(
                 this._projectionMatrix,
                 [
                     vertex[0],
                     vertex[1],
-                    vertex[2] + 5, // @Todo: remove this hardcode asap!
+                    vertex[2],
                 ],
             )
         );
