@@ -19,6 +19,7 @@ export class Canvas {
 
         element.width = width;
         element.height = height;
+        element.style.position = "absolute";
 
         const context = element.getContext("2d");
         if (context == null) {

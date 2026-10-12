@@ -1,5 +1,5 @@
 import { Canvas } from "./canvas";
-import { Renderer } from "./renderer";
+import { PolygonMode, Renderer } from "./renderer";
 import { ObjData, parseObj } from "./obj-parser";
 
 import {
@@ -83,6 +83,38 @@ class App {
             zNear: 1,
             zFar: 100,
         };
+
+        this._createGui();
+    }
+
+    private _createGui() {
+        const menuWrapper = document.createElement("div");
+        menuWrapper.style.zIndex = "999";
+        menuWrapper.style.position = "absolute";
+        menuWrapper.style.backgroundColor = "white";
+        menuWrapper.style.margin = "5px";
+        menuWrapper.style.padding = "5px";
+        document.body.appendChild(menuWrapper);
+
+        const polygonModeLabel = document.createElement("label");
+        polygonModeLabel.innerText = "Polygon mode"
+        polygonModeLabel.style.marginRight = "5px";
+        menuWrapper.appendChild(polygonModeLabel);
+
+        const polygonModeDropDown = document.createElement("select");
+        menuWrapper.appendChild(polygonModeDropDown);
+
+        for (const variant of Object.values(PolygonMode)) {
+            const option = document.createElement("option");
+            option.value = variant;
+            option.innerText = variant;
+            
+            polygonModeDropDown.appendChild(option);
+        }
+
+        polygonModeDropDown.value = this._renderer.getPolygonMode();
+
+        polygonModeDropDown.addEventListener("change", () => this._renderer.setPolygonMode(polygonModeDropDown.value as PolygonMode));
     }
 
     public async init(): Promise<void> {

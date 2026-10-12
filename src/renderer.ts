@@ -9,9 +9,9 @@ import {
     projectVectorPerspective,
 } from "./math";
 
-export const enum PolygonMode {
-    Filled,
-    Wireframe,
+export enum PolygonMode {
+    Filled = "Filled",
+    Wireframe = "Wireframe",
 }
 
 interface ICanvas {
@@ -72,6 +72,10 @@ export class Renderer {
 
     public setPolygonMode(mode: PolygonMode) {
         this._polygonMode = mode;
+    }
+
+    public getPolygonMode(): PolygonMode {
+        return this._polygonMode;
     }
 
     public draw(vertices: Vector3[], faces: Face[], modelTransform: Matrix4): void {
