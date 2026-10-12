@@ -9,6 +9,11 @@ import {
     projectVectorPerspective,
 } from "./math";
 
+export const enum PolygonMode {
+    Filled,
+    Wireframe,
+}
+
 interface ICanvas {
     getPixelSize(): Vector2;
     getContext(): CanvasRenderingContext2D;
@@ -38,6 +43,8 @@ export class Renderer {
 
     private _projectionMatrix: Matrix4 = makeMatrix4Identity();
 
+    private _polygonMode: PolygonMode = PolygonMode.Filled;
+
     public constructor(canvas: ICanvas, clearColor: Vector3 = [0, 0, 0]) {
         this._canvas = canvas;
         this._cachedCanvasSize = this._canvas.getPixelSize();
@@ -63,6 +70,10 @@ export class Renderer {
         ctx.putImageData(this._frameBuffer.image, 0, 0);
     }
 
+    public setPolygonMode(mode: PolygonMode) {
+        this._polygonMode = mode;
+    }
+
     public draw(vertices: Vector3[], faces: Face[], modelTransform: Matrix4): void {
         const transformed = vertices.map(
             (vertex) => multiplyMatrix4AndVector3(modelTransform, vertex)
@@ -84,12 +95,26 @@ export class Renderer {
             const b = projected[face.vertexIndices[1]];
             const c = projected[face.vertexIndices[2]];
 
-            this._drawFilledTriangle(
-                this._transform_to_viewport_center(a),
-                this._transform_to_viewport_center(b),
-                this._transform_to_viewport_center(c),
-                [255, 0, 0],
-            );
+            switch (this._polygonMode) {
+                case PolygonMode.Filled:
+                    this._drawFilledTriangle(
+                        this._transform_to_viewport_center(a),
+                        this._transform_to_viewport_center(b),
+                        this._transform_to_viewport_center(c),
+                        [255, 0, 0],
+                    );
+                    break;
+                case PolygonMode.Wireframe:
+                    this._drawTriangle(
+                        this._transform_to_viewport_center(a),
+                        this._transform_to_viewport_center(b),
+                        this._transform_to_viewport_center(c),
+                        [255, 0, 0],
+                    );
+                    break;
+                default:
+                    exhaustiveCheck(this._polygonMode);
+            }
         }
     }
 
@@ -281,4 +306,8 @@ function toCanvasColorFormat(color: Vector3, a: number = 255): number {
     const [r, g, b] = color;
 
     return (a << 24) | (b << 16) | (g << 8) | r;
+}
+
+function exhaustiveCheck(value: never): never {
+    return value;
 }
