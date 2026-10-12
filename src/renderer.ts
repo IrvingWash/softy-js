@@ -38,6 +38,17 @@ export class Renderer {
         this._frameBuffer.colors[position[1] * width + position[0]] = rgba(color);
     }
 
+    public drawFilledRectangle(position: vec2, size: vec2, color: vec3): void {
+        const [x, y] = position;
+        const [width, height] = size;
+
+        for (let w = 0; w < width; w++) {
+            for (let h = 0; h < height; h++) {
+                this.drawPixel([x + w, y + h], color);
+            }
+        }
+    }
+
     private _clearFrameBuffer() {
         this._frameBuffer.colors.fill(rgba(this._clearColor));
     }

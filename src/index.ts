@@ -29,7 +29,7 @@ class App {
     private _render(): void {
         this._renderer.startDrawing();
 
-        this._renderer.drawPixel([100, 100], [255, 0, 0]);
+        this._renderer.drawFilledRectangle([100, 100], [100, 100], [255, 0, 0]);
 
         this._renderer.finishDrawing();
     }
