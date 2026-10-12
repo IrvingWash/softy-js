@@ -1,6 +1,6 @@
 import { vec2, vec3 } from "gl-matrix";
 
-import { type ICanvas } from "../icanvas";
+import { type ICanvas } from "./icanvas";
 
 interface FrameBuffer {
     image: ImageData;
