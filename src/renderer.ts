@@ -32,6 +32,7 @@ export interface DirectionalLight {
 }
 
 export interface Camera {
+    position: Vector3;
     fov: number;
     zNear: number;
     zFar: number;
@@ -68,6 +69,13 @@ export class Renderer {
 
     private _directionalLight: DirectionalLight | null = null;
 
+    private _camera: Camera = {
+        position: [0, 0, 0],
+        fov: 1.047198, // 60 degrees
+        zNear: 0.1,
+        zFar: 100,
+    };
+
     public constructor(canvas: ICanvas) {
         this._canvas = canvas;
         this._cachedCanvasSize = this._canvas.getPixelSize();
@@ -92,6 +100,8 @@ export class Renderer {
             camera.zNear,
             camera.zFar,
         );
+
+        this._camera = camera;
     }
 
     public finishDrawing(): void {
@@ -160,7 +170,7 @@ export class Renderer {
             switch (this._cullMode) {
                 case CullMode.BackFace:
                     const originRay = subtractVector3s(
-                        [0, 0, 0], // @Todo: the ray is casted from the origin, we should change this when we have a camera
+                        this._camera.position,
                         [aTransformed[0], aTransformed[1], aTransformed[2]],
                     );
                     const alignment = dotProduct(faceNormal, originRay);
@@ -193,6 +203,9 @@ export class Renderer {
                 color: faceColor,
             });
         }
+
+        // Just a simple painters algorithm for now. @Todo
+        trianglesToRender.sort((a, b) => b.positions[0][2] - a.positions[0][2]);
 
         for (const triangleToRender of trianglesToRender) {
             const [a, b, c] = triangleToRender.positions;

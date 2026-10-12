@@ -73,6 +73,7 @@ class App {
         this._renderer = new Renderer(canvas);
 
         this._camera = {
+            position: [0, 0, 0],
             fov: 1.047198, // 60 degrees
             zNear: 1,
             zFar: 100,
