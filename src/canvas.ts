@@ -1,4 +1,6 @@
-const mainCanvasId = "mainCanvas";
+import { vec2 } from "gl-matrix";
+
+const MAIN_CANVAS_ID = "mainCanvas";
 
 export class Canvas {
     private _element: HTMLCanvasElement;
@@ -9,14 +11,8 @@ export class Canvas {
         this._context = context;
     };
 
-    public static createFullscreen(): Canvas {
-        const dpr = window.devicePixelRatio;
-
-        return this.create(window.innerWidth * dpr, window.innerHeight * dpr);
-    }
-
     public static create(width: number, height: number): Canvas {
-        const element = document.querySelector<HTMLCanvasElement>(`#${mainCanvasId}`);
+        const element = document.querySelector<HTMLCanvasElement>(`#${MAIN_CANVAS_ID}`);
         if (element == null) {
             throw new Error("Failed to find main canvas");
         }
@@ -30,5 +26,19 @@ export class Canvas {
         }
 
         return new Canvas(element, context);
+    }
+
+    public static createFullscreen(): Canvas {
+        const dpr = window.devicePixelRatio;
+
+        return this.create(window.innerWidth * dpr, window.innerHeight * dpr);
+    }
+
+    public getPixelSize(): vec2 {
+        return [this._element.width, this._element.height];
+    }
+
+    public getContext(): CanvasRenderingContext2D {
+        return this._context;
     }
 }
