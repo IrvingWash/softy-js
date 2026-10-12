@@ -36,6 +36,8 @@ class App {
 
         this._renderer.drawFilledRectangle([100, 100], [100, 100], [255, 0, 0]);
         this._renderer.drawLine([300, 300], [600, 600], [0, 255, 0]);
+        this._renderer.drawTriangle([500, 500], [750, 750], [250, 750], [255, 0, 0]);
+        this._renderer.drawFilledTriangle([800, 100], [900, 300], [800, 500], [255, 0, 0]);
 
         this._renderer.finishDrawing();
     }
