@@ -1,5 +1,10 @@
+import { Canvas } from "./canvas";
+import { Renderer } from "./renderer";
+
 function main(): void {
-    console.log("Hello, World!");
+    const canvas = Canvas.createFullscreen();
+
+    const renderer = new Renderer(canvas);
 }
 
 main();
