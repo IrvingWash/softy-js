@@ -40,6 +40,8 @@ export interface Camera {
 interface ICanvas {
     getPixelSize(): Vector2;
     getContext(): CanvasRenderingContext2D;
+    subscribeResize(listener: () => void): void;
+    unsubscribeResize(listener: () => void): void;
 }
 
 interface FrameBuffer {
@@ -72,6 +74,12 @@ export class Renderer {
 
         this._frameBuffer = this._createFrameBuffer();
         this._zBuffer = this._createZBuffer();
+
+        this._canvas.subscribeResize(this._onResize);
+    }
+
+    public destroy() {
+        this._canvas.unsubscribeResize(this._onResize);
     }
 
     public startDrawing(camera: Camera): void {
@@ -223,17 +231,6 @@ export class Renderer {
         }
 
         this._frameBuffer.colors[position[1] * width + position[0]] = toCanvasColorFormat(color);
-    }
-
-    private _drawFilledRectangle(position: Vector2, size: Vector2, color: Vector3): void {
-        const [x, y] = position;
-        const [width, height] = size;
-
-        for (let w = 0; w < width; w++) {
-            for (let h = 0; h < height; h++) {
-                this._drawPixel([x + w, y + h], color);
-            }
-        }
     }
 
     private _drawLine(start: Vector2, end: Vector2, color: Vector3): void {
@@ -403,6 +400,14 @@ export class Renderer {
             (1 - v[1]) / 2 * height,
         ];
     }
+
+    private _onResize = () => {
+        console.log("resized");
+        this._cachedCanvasSize = this._canvas.getPixelSize();
+
+        this._frameBuffer = this._createFrameBuffer();
+        this._zBuffer = this._createZBuffer();
+    };
 }
 
 // RGBA to AABBGGRR
