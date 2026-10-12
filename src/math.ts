@@ -47,6 +47,14 @@ export function makePerspectiveProjectionMatrix(
     return matrix;
 }
 
+export function multiplyVector3s(a: Vector3, b: Vector3): Vector3 {
+    return [
+        a[0] * b[0],
+        a[1] * b[1],
+        a[2] * b[2],
+    ];
+}
+
 export function multiplyMatrix4s(a: Matrix4, b: Matrix4): Matrix4 {
     const result = makeEmptyMatrix4();
 
@@ -249,3 +257,11 @@ export function calculateFaceNormal(a: Vector3, b: Vector3, c: Vector3): Vector3
 
     return normal;
 }
+
+export function scaleVector3(v: Vector3, s: number): Vector3 {
+    return [v[0] * s, v[1] * s, v[2] * s];
+}
+
+export function clamp(v: number, min: number, max: number): number {
+    return Math.min(Math.max(v, min), max);
+};

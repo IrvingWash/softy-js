@@ -4,11 +4,15 @@ import {
     Vector3,
     Vector4,
     calculateFaceNormal,
+    clamp,
     dotProduct,
     makeMatrix4Identity,
     makePerspectiveProjectionMatrix,
     multiplyMatrix4AndVector3,
+    multiplyVector3s,
+    normalize,
     projectVectorPerspective,
+    scaleVector3,
     subtractVector3s,
 } from "./math";
 
@@ -20,6 +24,17 @@ export enum PolygonMode {
 export enum CullMode {
     BackFace = "BackFace",
     None = "None",
+}
+
+export interface DirectionalLight {
+    direction: Vector3;
+    color: Vector3;
+}
+
+export interface Camera {
+    fov: number;
+    zNear: number;
+    zFar: number;
 }
 
 interface ICanvas {
@@ -34,13 +49,6 @@ interface FrameBuffer {
 
 interface Face {
     vertexIndices: Vector3;
-    normalIndices: Vector3;
-}
-
-interface Camera {
-    fov: number;
-    zNear: number;
-    zFar: number;
 }
 
 export class Renderer {
@@ -54,6 +62,8 @@ export class Renderer {
 
     private _polygonMode: PolygonMode = PolygonMode.Filled;
     private _cullMode: CullMode = CullMode.BackFace;
+
+    private _directionalLight: DirectionalLight | null = null;
 
     public constructor(canvas: ICanvas, clearColor: Vector3 = [0, 0, 0]) {
         this._canvas = canvas;
@@ -96,8 +106,23 @@ export class Renderer {
         return this._cullMode;
     }
 
+    public setDirectionalLight(light: DirectionalLight) {
+        this._directionalLight = light;
+
+        this._directionalLight.direction = normalize(this._directionalLight.direction);
+    }
+
+    public getDirectionalLight(): DirectionalLight | null {
+        return this._directionalLight;
+    }
+
     public draw(vertices: Vector3[], faces: Face[], modelTransform: Matrix4): void {
-        const verticesToRender: [Vector4, Vector4, Vector4][] = [];
+        interface TriangleToRender {
+            positions: [Vector4, Vector4, Vector4];
+            color: Vector3;
+        }
+
+        const trianglesToRender: TriangleToRender[] = [];
 
         for (const face of faces) {
             const a = vertices[face.vertexIndices[0]];
@@ -117,7 +142,7 @@ export class Renderer {
             switch (this._cullMode) {
                 case CullMode.BackFace:
                     const originRay = subtractVector3s(
-                        [0, 0, 0],
+                        [0, 0, 0], // @Todo: the ray is casted from the origin, we should change this when we have a camera
                         [aTransformed[0], aTransformed[1], aTransformed[2]],
                     );
                     const alignment = dotProduct(faceNormal, originRay);
@@ -134,15 +159,25 @@ export class Renderer {
                     exhaustiveCheck(this._cullMode);
             }
 
+            let faceColor: Vector3 = [255, 255, 255];
+            if (this._directionalLight) {
+                const alignment = -dotProduct(faceNormal, this._directionalLight.direction);
+
+                faceColor = calculateShadedColor(faceColor, this._directionalLight.color, alignment);
+            }
+
             const aProjected = projectVectorPerspective(this._projectionMatrix, [aTransformed[0], aTransformed[1], aTransformed[2]]);
             const bProjected = projectVectorPerspective(this._projectionMatrix, [bTransformed[0], bTransformed[1], bTransformed[2]]);
             const cProjected = projectVectorPerspective(this._projectionMatrix, [cTransformed[0], cTransformed[1], cTransformed[2]]);
 
-            verticesToRender.push([aProjected, bProjected, cProjected]);
+            trianglesToRender.push({
+                positions: [aProjected, bProjected, cProjected],
+                color: faceColor,
+            });
         }
 
-        for (const vertices of verticesToRender) {
-            const [a, b, c] = vertices;
+        for (const triangleToRender of trianglesToRender) {
+            const [a, b, c] = triangleToRender.positions;
 
             switch (this._polygonMode) {
                 case PolygonMode.Filled:
@@ -150,7 +185,7 @@ export class Renderer {
                         this._transform_to_viewport_center(a),
                         this._transform_to_viewport_center(b),
                         this._transform_to_viewport_center(c),
-                        [255, 0, 0],
+                        triangleToRender.color,
                     );
                     break;
                 case PolygonMode.Wireframe:
@@ -158,7 +193,7 @@ export class Renderer {
                         this._transform_to_viewport_center(a),
                         this._transform_to_viewport_center(b),
                         this._transform_to_viewport_center(c),
-                        [255, 0, 0],
+                        triangleToRender.color,
                     );
                     break;
                 default:
@@ -359,4 +394,12 @@ function toCanvasColorFormat(color: Vector3, a: number = 255): number {
 
 function exhaustiveCheck(value: never): never {
     return value;
+}
+
+function calculateShadedColor(originalColor: Vector3, lightColor: Vector3, factor: number): Vector3 {
+    factor = clamp(factor, 0, 1);
+
+    const result: Vector3 = scaleVector3(multiplyVector3s(originalColor, lightColor), factor / 255);
+
+    return result;
 }

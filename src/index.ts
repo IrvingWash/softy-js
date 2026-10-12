@@ -1,5 +1,5 @@
 import { Canvas } from "./canvas";
-import { CullMode, PolygonMode, Renderer } from "./renderer";
+import { Camera, CullMode, DirectionalLight, PolygonMode, Renderer } from "./renderer";
 import { ObjData, parseObj } from "./obj-parser";
 
 import {
@@ -24,12 +24,6 @@ async function main(): Promise<void> {
     app.run();
 }
 
-interface Camera {
-    fov: number;
-    zNear: number;
-    zFar: number;
-}
-
 class Entity {
     public position: Vector3 = [0, 0, 0];
     public scale: Vector3 = [1, 1, 1];
@@ -46,9 +40,9 @@ class Entity {
     }
 
     public update(deltaTime: number) {
-        this.rotation[0] += deltaTime;
-        this.rotation[1] += deltaTime;
-        this.rotation[2] += deltaTime;
+        this.rotation[0] += 0.5 * deltaTime;
+        this.rotation[1] += 0.5 * deltaTime;
+        this.rotation[2] += 0.5 * deltaTime;
     }
 
     public getModelTransform(): Matrix4 {
@@ -69,9 +63,12 @@ class App {
 
     private _camera: Camera;
     private _entity: Entity | null = null;
-
     private _deltaTime: number = 0;
     private _previousFrameTime: number = 0;
+    private _directionalLight: DirectionalLight = {
+        color: [ 125, 125, 125 ],
+        direction: [0, 0, 1],
+    };
 
     public constructor() {
         const canvas = Canvas.createFullscreen();
@@ -85,60 +82,6 @@ class App {
         };
 
         this._createGui();
-    }
-
-    private _createGui() {
-        const menuWrapper = document.createElement("div");
-        menuWrapper.style.zIndex = "999";
-        menuWrapper.style.position = "absolute";
-        menuWrapper.style.backgroundColor = "white";
-        menuWrapper.style.margin = "5px";
-        menuWrapper.style.padding = "5px";
-        document.body.appendChild(menuWrapper);
-
-        { // Polygon mode
-            const polygonModeLabel = document.createElement("label");
-            polygonModeLabel.innerText = "Polygon mode"
-            polygonModeLabel.style.marginRight = "5px";
-            menuWrapper.appendChild(polygonModeLabel);
-
-            const polygonModeDropDown = document.createElement("select");
-            menuWrapper.appendChild(polygonModeDropDown);
-
-            for (const variant of Object.values(PolygonMode)) {
-                const option = document.createElement("option");
-                option.value = variant;
-                option.innerText = variant;
-                
-                polygonModeDropDown.appendChild(option);
-            }
-
-            polygonModeDropDown.value = this._renderer.getPolygonMode();
-
-            polygonModeDropDown.addEventListener("change", () => this._renderer.setPolygonMode(polygonModeDropDown.value as PolygonMode));
-        }
-
-        { // Cull mode
-            const cullModeLabel = document.createElement("label");
-            cullModeLabel.innerText = "Cull mode"
-            cullModeLabel.style.marginRight = "5px";
-            menuWrapper.appendChild(cullModeLabel);
-
-            const cullModeDropDown = document.createElement("select");
-            menuWrapper.appendChild(cullModeDropDown);
-
-            for (const variant of Object.values(CullMode)) {
-                const option = document.createElement("option");
-                option.value = variant;
-                option.innerText = variant;
-                
-                cullModeDropDown.appendChild(option);
-            }
-
-            cullModeDropDown.value = this._renderer.getCullMode();
-
-            cullModeDropDown.addEventListener("change", () => this._renderer.setCullMode(cullModeDropDown.value as CullMode));
-        }
     }
 
     public async init(): Promise<void> {
@@ -166,6 +109,8 @@ class App {
     }
 
     private _render(): void {
+        this._renderer.setDirectionalLight(this._directionalLight);
+
         this._renderer.startDrawing(this._camera);
 
         if (this._entity?.objData) {
@@ -192,6 +137,127 @@ class App {
         const objData = parseObj(obj);
 
         return objData;
+    }
+
+    private _createGui() {
+        const menuWrapper = document.createElement("div");
+        menuWrapper.style.zIndex = "999";
+        menuWrapper.style.position = "absolute";
+        menuWrapper.style.backgroundColor = "white";
+        menuWrapper.style.margin = "5px";
+        menuWrapper.style.padding = "5px";
+        menuWrapper.style.display = "flex";
+        menuWrapper.style.flexDirection = "column";
+        document.body.appendChild(menuWrapper);
+
+        const menuItemWrapperMargin = "0 0 5px 0";
+
+        { // Polygon mode
+            const polygonModeWrapper = document.createElement("div");
+            polygonModeWrapper.style.display = "flex";
+            polygonModeWrapper.style.justifyContent = "space-between";
+            polygonModeWrapper.style.margin = menuItemWrapperMargin;
+            menuWrapper.appendChild(polygonModeWrapper);
+
+            const polygonModeLabel = document.createElement("label");
+            polygonModeLabel.innerText = "Polygon mode"
+            polygonModeWrapper.appendChild(polygonModeLabel);
+
+            const polygonModeDropDown = document.createElement("select");
+            polygonModeWrapper.appendChild(polygonModeDropDown);
+
+            for (const variant of Object.values(PolygonMode)) {
+                const option = document.createElement("option");
+                option.value = variant;
+                option.innerText = variant;
+                
+                polygonModeDropDown.appendChild(option);
+            }
+
+            polygonModeDropDown.value = this._renderer.getPolygonMode();
+
+            polygonModeDropDown.addEventListener("change", () => this._renderer.setPolygonMode(polygonModeDropDown.value as PolygonMode));
+        }
+
+        { // Cull mode
+            const cullModeWrapper = document.createElement("div");
+            cullModeWrapper.style.display = "flex";
+            cullModeWrapper.style.justifyContent = "space-between";
+            cullModeWrapper.style.margin = menuItemWrapperMargin;
+            menuWrapper.appendChild(cullModeWrapper);
+
+            const cullModeLabel = document.createElement("label");
+            cullModeLabel.innerText = "Cull mode"
+            cullModeWrapper.appendChild(cullModeLabel);
+
+            const cullModeDropDown = document.createElement("select");
+            cullModeWrapper.appendChild(cullModeDropDown);
+
+            for (const variant of Object.values(CullMode)) {
+                const option = document.createElement("option");
+                option.value = variant;
+                option.innerText = variant;
+                
+                cullModeDropDown.appendChild(option);
+            }
+
+            cullModeDropDown.value = this._renderer.getCullMode();
+
+            cullModeDropDown.addEventListener("change", () => this._renderer.setCullMode(cullModeDropDown.value as CullMode));
+        }
+
+        { // Directional Light
+            const directionalLightWrapper = document.createElement("div");
+            directionalLightWrapper.style.display = "flex";
+            directionalLightWrapper.style.justifyContent = "space-between";
+            directionalLightWrapper.style.margin = menuItemWrapperMargin;
+            menuWrapper.appendChild(directionalLightWrapper);
+
+            const directionalLightLabel = document.createElement("label");
+            directionalLightLabel.innerText = "Directional light";
+            directionalLightWrapper.appendChild(directionalLightLabel);
+
+            { // Color
+                const colorInput = document.createElement("input");
+                colorInput.type = "color";
+                colorInput.value = "#" + this._directionalLight.color
+                    .map(c => Math.round(c).toString(16).padStart(2, "0"))
+                    .join("");
+                directionalLightWrapper.appendChild(colorInput);
+
+                colorInput.addEventListener("input", () => this._directionalLight.color = [
+                    parseInt(colorInput.value.slice(1, 3), 16),
+                    parseInt(colorInput.value.slice(3, 5), 16),
+                    parseInt(colorInput.value.slice(5, 7), 16),
+                ]);
+            }
+
+            { // Direction
+                function createSlider(initialValue: number): HTMLInputElement {
+                    const slider = document.createElement("input");
+                    slider.value = String(initialValue);
+                    slider.type = "range";
+                    slider.min = "0";
+                    slider.max = "1";
+                    slider.step = "0.05";
+                    slider.style.width = "50px";
+
+                    return slider;
+                }
+
+                const xSlider = createSlider(this._directionalLight.direction[0]);
+                const ySlider = createSlider(this._directionalLight.direction[1]);
+                const zSlider = createSlider(this._directionalLight.direction[2]);
+
+                directionalLightWrapper.appendChild(xSlider);
+                directionalLightWrapper.appendChild(ySlider);
+                directionalLightWrapper.appendChild(zSlider);
+
+                xSlider.addEventListener("input", () => this._directionalLight.direction[0] = Number(xSlider.value));
+                xSlider.addEventListener("input", () => this._directionalLight.direction[1] = Number(ySlider.value));
+                xSlider.addEventListener("input", () => this._directionalLight.direction[2] = Number(zSlider.value));
+            }
+        }
     }
 }
 
