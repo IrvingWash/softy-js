@@ -1,17 +1,21 @@
 import { Canvas } from "./canvas";
 import { Renderer } from "./renderer";
+import { parseObj } from "./obj-parser";
 
 const CLEAR_COLOR = [0, 0, 255];
 const SECONDS_IN_MILLISECOND = 1 / 1000;
 
-function main(): void {
+async function main(): Promise<void> {
     const app = new App();
+
+    await app.init();
 
     app.run();
 }
 
 class App {
     private readonly _renderer: Renderer;
+
     private _deltaTime: number = 0;
     private _previousFrameTime: number = 0;
 
@@ -19,6 +23,10 @@ class App {
         const canvas = Canvas.createFullscreen();
 
         this._renderer = new Renderer(canvas, CLEAR_COLOR);
+    }
+
+    public async init(): Promise<void> {
+        await this._loadModel("assets/models/f22.obj");
     }
 
     public run(): void {
@@ -46,6 +54,15 @@ class App {
         this._deltaTime = (currentTime - this._previousFrameTime) * SECONDS_IN_MILLISECOND;
 
         this._previousFrameTime = currentTime;
+    }
+
+    private async _loadModel(path: string): Promise<void> {
+        const response = await fetch(path);
+        const obj = await response.text();
+
+        const objData = parseObj(obj);
+        
+        console.log(objData);
     }
 }
 

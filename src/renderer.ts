@@ -1,6 +1,9 @@
 import { vec2, vec3 } from "gl-matrix";
 
-import { type ICanvas } from "./icanvas";
+interface ICanvas {
+    getPixelSize(): vec2;
+    getContext(): CanvasRenderingContext2D;
+}
 
 interface FrameBuffer {
     image: ImageData;
