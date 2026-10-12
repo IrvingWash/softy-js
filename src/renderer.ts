@@ -65,12 +65,11 @@ export class Renderer {
 
     private _directionalLight: DirectionalLight | null = null;
 
-    public constructor(canvas: ICanvas, clearColor: Vector3 = [0, 0, 0]) {
+    public constructor(canvas: ICanvas) {
         this._canvas = canvas;
         this._cachedCanvasSize = this._canvas.getPixelSize();
 
         this._frameBuffer = this._createFrameBuffer();
-        this._clearColor = clearColor;
     }
 
     public startDrawing(camera: Camera): void {
@@ -88,6 +87,14 @@ export class Renderer {
         const ctx = this._canvas.getContext();
 
         ctx.putImageData(this._frameBuffer.image, 0, 0);
+    }
+
+    public setClearColor(color: Vector3) {
+        this._clearColor = color;
+    }
+
+    public getClearColor(): Vector3 {
+        return this._clearColor;
     }
 
     public setPolygonMode(mode: PolygonMode): void {

@@ -1,5 +1,5 @@
 import { Canvas } from "./canvas";
-import { Camera, CullMode, DirectionalLight, PolygonMode, Renderer } from "./renderer";
+import { Camera, CullMode, PolygonMode, Renderer } from "./renderer";
 import { ObjData, parseObj } from "./obj-parser";
 
 import {
@@ -57,6 +57,10 @@ class Entity {
     }
 }
 
+const CLEAR_COLOR: Vector3 = [135, 206, 235];
+const SUN_COLOR: Vector3 = [255, 255, 255];
+const SUN_DIRECTION: Vector3 = [0, 0, 1];
+
 class App {
     private readonly _renderer: Renderer;
 
@@ -64,26 +68,19 @@ class App {
     private _entity: Entity | null = null;
     private _deltaTime: number = 0;
     private _previousFrameTime: number = 0;
-    private _directionalLight: DirectionalLight = {
-        color: [ 125, 125, 125 ],
-        direction: [0, 0, 1],
-    };
-    private _clearColor: Vector3 = [70, 70, 70];
 
     private _isGuiVisible: boolean = true;
 
     public constructor() {
         const canvas = Canvas.createFullscreen();
 
-        this._renderer = new Renderer(canvas, this._clearColor);
+        this._renderer = new Renderer(canvas);
 
         this._camera = {
             fov: 1.047198, // 60 degrees
             zNear: 1,
             zFar: 100,
         };
-
-        this._createGui();
     }
 
     public async init(): Promise<void> {
@@ -93,6 +90,15 @@ class App {
             [0, 0, 0],
             await this._loadModel("assets/models/f22.obj"),
         );
+
+        this._renderer.setClearColor(CLEAR_COLOR);
+
+        this._renderer.setDirectionalLight({
+            color: SUN_COLOR,
+            direction: SUN_DIRECTION,
+        });
+
+        this._createGui();
     }
 
     public run(): void {
@@ -111,8 +117,6 @@ class App {
     }
 
     private _render(): void {
-        this._renderer.setDirectionalLight(this._directionalLight);
-
         this._renderer.startDrawing(this._camera);
 
         if (this._entity?.objData) {
@@ -172,12 +176,38 @@ class App {
                         button.innerText = "Show";
                         child.style.display = "none";
                     } else {
-                        child.style.display = "flex";
+                        child.style.display = "flex"; // This is stupid, but looks ok for now
                     }
                 }
 
                 this._isGuiVisible = !this._isGuiVisible;
             });
+        }
+
+        { // Clear color
+            const clearColorWrapper = document.createElement("div");
+            clearColorWrapper.style.display = "flex";
+            clearColorWrapper.style.justifyContent = "space-between";
+            clearColorWrapper.style.margin = menuItemWrapperMargin;
+            menuWrapper.appendChild(clearColorWrapper);
+
+            const clearColorLabel = document.createElement("label");
+            clearColorLabel.innerText = "Clear color"
+            clearColorWrapper.appendChild(clearColorLabel);
+
+            console.log(this._renderer.getClearColor());
+            const colorInput = document.createElement("input");
+            colorInput.type = "color";
+            colorInput.value = "#" + this._renderer.getClearColor()
+                .map(c => Math.round(c).toString(16).padStart(2, "0"))
+                .join("");
+            clearColorWrapper.appendChild(colorInput);
+
+            colorInput.addEventListener("input", () => this._renderer.setClearColor([
+                parseInt(colorInput.value.slice(1, 3), 16),
+                parseInt(colorInput.value.slice(3, 5), 16),
+                parseInt(colorInput.value.slice(5, 7), 16),
+            ]));
         }
 
         { // Polygon mode
@@ -225,7 +255,7 @@ class App {
                 const option = document.createElement("option");
                 option.value = variant;
                 option.innerText = variant;
-                
+
                 cullModeDropDown.appendChild(option);
             }
 
@@ -248,16 +278,25 @@ class App {
             { // Color
                 const colorInput = document.createElement("input");
                 colorInput.type = "color";
-                colorInput.value = "#" + this._directionalLight.color
+                colorInput.value = "#" + (this._renderer.getDirectionalLight()?.color ?? SUN_COLOR)
                     .map(c => Math.round(c).toString(16).padStart(2, "0"))
                     .join("");
                 directionalLightWrapper.appendChild(colorInput);
 
-                colorInput.addEventListener("input", () => this._directionalLight.color = [
-                    parseInt(colorInput.value.slice(1, 3), 16),
-                    parseInt(colorInput.value.slice(3, 5), 16),
-                    parseInt(colorInput.value.slice(5, 7), 16),
-                ]);
+                colorInput.addEventListener("input", () => {
+                    const currentDirection = this._renderer.getDirectionalLight()?.direction ?? SUN_DIRECTION;
+
+                    this._renderer.setDirectionalLight(
+                        {
+                            direction: currentDirection,
+                            color: [
+                                parseInt(colorInput.value.slice(1, 3), 16),
+                                parseInt(colorInput.value.slice(3, 5), 16),
+                                parseInt(colorInput.value.slice(5, 7), 16),
+                            ]
+                        }
+                    );
+                });
             }
 
             { // Direction
@@ -273,17 +312,55 @@ class App {
                     return slider;
                 }
 
-                const xSlider = createSlider(this._directionalLight.direction[0]);
-                const ySlider = createSlider(this._directionalLight.direction[1]);
-                const zSlider = createSlider(this._directionalLight.direction[2]);
+                const currentDirection = this._renderer.getDirectionalLight()?.direction ?? SUN_DIRECTION;
+
+                const xSlider = createSlider(currentDirection[0]);
+                const ySlider = createSlider(currentDirection[1]);
+                const zSlider = createSlider(currentDirection[2]);
 
                 directionalLightWrapper.appendChild(xSlider);
                 directionalLightWrapper.appendChild(ySlider);
                 directionalLightWrapper.appendChild(zSlider);
 
-                xSlider.addEventListener("input", () => this._directionalLight.direction[0] = Number(xSlider.value));
-                xSlider.addEventListener("input", () => this._directionalLight.direction[1] = Number(ySlider.value));
-                xSlider.addEventListener("input", () => this._directionalLight.direction[2] = Number(zSlider.value));
+                xSlider.addEventListener("input", () => {
+                    const currentDirectionalLight = this._renderer.getDirectionalLight() ?? {
+                        color: SUN_COLOR,
+                        direction: SUN_DIRECTION,
+                    }
+
+                    this._renderer.setDirectionalLight(
+                        {
+                            color: [...currentDirectionalLight.color],
+                            direction: [Number(xSlider.value), currentDirectionalLight.direction[1], currentDirectionalLight.direction[2]],
+                        }
+                    );
+                });
+                ySlider.addEventListener("input", () => {
+                    const currentDirectionalLight = this._renderer.getDirectionalLight() ?? {
+                        color: SUN_COLOR,
+                        direction: SUN_DIRECTION,
+                    }
+
+                    this._renderer.setDirectionalLight(
+                        {
+                            color: [...currentDirectionalLight.color],
+                            direction: [currentDirectionalLight.direction[0], Number(ySlider.value), currentDirectionalLight.direction[2]],
+                        }
+                    );
+                });
+                zSlider.addEventListener("input", () => {
+                    const currentDirectionalLight = this._renderer.getDirectionalLight() ?? {
+                        color: SUN_COLOR,
+                        direction: SUN_DIRECTION,
+                    }
+
+                    this._renderer.setDirectionalLight(
+                        {
+                            color: [...currentDirectionalLight.color],
+                            direction: [currentDirectionalLight.direction[0], currentDirectionalLight.direction[1], Number(zSlider.value)],
+                        }
+                    );
+                });
             }
         }
     }
