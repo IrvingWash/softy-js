@@ -63,7 +63,7 @@ export class Renderer {
         ctx.putImageData(this._frameBuffer.image, 0, 0);
     }
 
-    public drawMesh(vertices: Vector3[], faces: Face[], modelTransform: Matrix4): void {
+    public draw(vertices: Vector3[], faces: Face[], modelTransform: Matrix4): void {
         const transformed = vertices.map(
             (vertex) => multiplyMatrix4AndVector3(modelTransform, vertex)
         );

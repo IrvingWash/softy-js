@@ -1,7 +1,7 @@
 import { Canvas } from "./canvas";
 import { Renderer } from "./renderer";
 import { ObjData, parseObj } from "./obj-parser";
-import { Vector3, makeTranslationMatrix, makeScaleMatrix, multiplyMatrix4s } from "./math";
+import { Vector3, makeTranslationMatrix, makeScaleMatrix, multiplyMatrix4s, Matrix4 } from "./math";
 
 const CLEAR_COLOR: Vector3 = [0, 0, 255];
 const SECONDS_IN_MILLISECOND = 1 / 1000;
@@ -20,11 +20,21 @@ interface Camera {
     zFar: number;
 }
 
-interface Entity {
-    position: Vector3;
-    scale: Vector3;
+class Entity {
+    public position: Vector3 = [0, 0, 0];
+    public scale: Vector3 = [1, 1, 1];
 
-    objData: ObjData
+    public objData: ObjData | null = null;
+
+    public constructor(position: Vector3, scale: Vector3, objData: ObjData) {
+        this.position = position;
+        this.scale = scale;
+        this.objData = objData;
+    }
+
+    public getModelMatrix(): Matrix4 {
+        return multiplyMatrix4s(makeTranslationMatrix(this.position), makeScaleMatrix(this.scale));
+    }
 }
 
 class App {
@@ -49,11 +59,11 @@ class App {
     }
 
     public async init(): Promise<void> {
-        this._entity = {
-            position: [0, 0, 10],
-            scale: [2, 2, 2],
-            objData: await this._loadModel("assets/models/f22.obj"),
-        }
+        this._entity = new Entity(
+            [0, 0, 10],
+            [2, 2, 2],
+            await this._loadModel("assets/models/f22.obj"),
+        );
     }
 
     public run(): void {
@@ -69,15 +79,11 @@ class App {
     private _render(): void {
         this._renderer.startDrawing(this._camera);
 
-        // this._renderer.drawFilledRectangle([100, 100], [100, 100], [255, 0, 0]);
-        // this._renderer.drawLine([300, 300], [600, 600], [0, 255, 0]);
-        // this._renderer.drawTriangle([500, 500], [750, 750], [250, 750], [255, 0, 0]);
-        // this._renderer.drawFilledTriangle([800, 100], [900, 300], [800, 500], [255, 0, 0]);
-        if (this._entity) {
-            this._renderer.drawMesh(
+        if (this._entity?.objData) {
+            this._renderer.draw(
                 this._entity.objData.vertices,
                 this._entity.objData.faces,
-                multiplyMatrix4s(makeTranslationMatrix(this._entity.position), makeScaleMatrix(this._entity.scale)),
+                this._entity.getModelMatrix(),
             );
         }
 

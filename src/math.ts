@@ -117,6 +117,66 @@ export function makeTranslationMatrix(v: Vector3): Matrix4 {
     return matrix;
 }
 
+/*
+| 1 0  0 0 |
+| 0 c -s 0 |
+| 0 s  c 0 |
+| 0 0  0 1 |
+*/
+export function makeRotationAroundXMatrix(angle: number): Matrix4 {
+    const matrix = makeMatrix4Identity();
+
+    const c = Math.cos(angle);
+    const s = Math.sin(angle);
+
+    matrix[1][1] = c;
+    matrix[1][2] = -s;
+    matrix[2][1] = s;
+    matrix[2][2] = c;
+
+    return matrix;
+}
+
+/*
+|  c 0 s 0 |
+|  0 1 0 0 |
+| -s 0 c 0 |
+|  0 0 0 1 |
+*/
+export function makeRotationAroundYMatrix(angle: number): Matrix4 {
+    const matrix = makeMatrix4Identity();
+
+    const c = Math.cos(angle);
+    const s = Math.sin(angle);
+
+    matrix[0][0] = c;
+    matrix[0][2] = s;
+    matrix[2][0] = -s;
+    matrix[2][2] = c;
+
+    return matrix;
+}
+
+/*
+| c -s 0 0 |
+| s  c 0 0 |
+| 0  0 1 0 |
+| 0  0 0 1 |
+*/
+export function makeRotationAroundZMatrix(angle: number): Matrix4 {
+    const matrix = makeMatrix4Identity();
+
+    const c = Math.cos(angle);
+    const s = Math.sin(angle);
+
+    matrix[0][0] = c;
+    matrix[0][1] = -s;
+    matrix[1][0] = s;
+    matrix[1][1] = c;
+
+    return matrix;
+}
+
 function makeEmptyMatrix4(): Matrix4 {
     return [
         [0, 0, 0, 0],
