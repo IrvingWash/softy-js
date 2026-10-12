@@ -57,6 +57,7 @@ export class Renderer {
 
     private _frameBuffer: FrameBuffer;
     private _clearColor: Vector3 = [0, 0, 0];
+    private _zBuffer: Uint32Array;
 
     private _projectionMatrix: Matrix4 = makeMatrix4Identity();
 
@@ -70,10 +71,12 @@ export class Renderer {
         this._cachedCanvasSize = this._canvas.getPixelSize();
 
         this._frameBuffer = this._createFrameBuffer();
+        this._zBuffer = this._createZBuffer();
     }
 
     public startDrawing(camera: Camera): void {
         this._clearFrameBuffer();
+        this._clearZBuffer();
 
         this._projectionMatrix = makePerspectiveProjectionMatrix(
             this._cachedCanvasSize[1] / this._cachedCanvasSize[0],
@@ -362,6 +365,16 @@ export class Renderer {
             startX -= inverseSlope1;
             endX -= inverseSlope2;
         }
+    }
+
+    private _clearZBuffer(): void {
+        this._zBuffer.fill(0);
+    }
+
+    private _createZBuffer(): Uint32Array {
+        const [width, height] = this._cachedCanvasSize;
+
+        return new Uint32Array(width * height);
     }
 
     private _clearFrameBuffer(): void {
