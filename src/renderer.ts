@@ -1,7 +1,15 @@
-import { vec2, vec3 } from "gl-matrix";
+import {
+    Matrix4,
+    Vector2,
+    Vector3,
+    Vector4,
+    makeMatrix4Identity,
+    makePerspectiveProjectionMatrix,
+    projectVectorPerspective,
+} from "./math";
 
 interface ICanvas {
-    getPixelSize(): vec2;
+    getPixelSize(): Vector2;
     getContext(): CanvasRenderingContext2D;
 }
 
@@ -10,14 +18,26 @@ interface FrameBuffer {
     colors: Uint32Array;
 }
 
+interface Face {
+    vertexIndices: Vector3;
+}
+
+interface Camera {
+    fov: number;
+    zNear: number;
+    zFar: number;
+}
+
 export class Renderer {
     private _canvas: ICanvas;
-    private _cachedCanvasSize: vec2;
+    private _cachedCanvasSize: Vector2;
 
     private _frameBuffer: FrameBuffer;
-    private _clearColor: vec3 = [0, 0, 0];
+    private _clearColor: Vector3 = [0, 0, 0];
 
-    public constructor(canvas: ICanvas, clearColor: vec3 = [0, 0, 0]) {
+    private _projectionMatrix: Matrix4 = makeMatrix4Identity();
+
+    public constructor(canvas: ICanvas, clearColor: Vector3 = [0, 0, 0]) {
         this._canvas = canvas;
         this._cachedCanvasSize = this._canvas.getPixelSize();
 
@@ -25,8 +45,15 @@ export class Renderer {
         this._clearColor = clearColor;
     }
 
-    public startDrawing(): void {
+    public startDrawing(camera: Camera): void {
         this._clearFrameBuffer();
+
+        this._projectionMatrix = makePerspectiveProjectionMatrix(
+            this._cachedCanvasSize[1] / this._cachedCanvasSize[0],
+            camera.fov,
+            camera.zNear,
+            camera.zFar,
+        );
     }
 
     public finishDrawing(): void {
@@ -35,13 +62,46 @@ export class Renderer {
         ctx.putImageData(this._frameBuffer.image, 0, 0);
     }
 
-    public drawPixel(position: vec2, color: vec3): void {
-        const [width] = this._cachedCanvasSize;
+    public drawMesh(vertices: Vector3[], faces: Face[]): void {
+        const projected = vertices.map(
+            (vertex) => projectVectorPerspective(
+                this._projectionMatrix,
+                [
+                    vertex[0],
+                    vertex[1],
+                    vertex[2] + 5, // @Todo: remove this hardcode asap!
+                ],
+            )
+        );
+
+        for (const face of faces) {
+            const a = projected[face.vertexIndices[0]];
+            const b = projected[face.vertexIndices[1]];
+            const c = projected[face.vertexIndices[2]];
+
+            this.drawFilledTriangle(
+                this._transform_to_viewport_center(a),
+                this._transform_to_viewport_center(b),
+                this._transform_to_viewport_center(c),
+                [255, 0, 0],
+            );
+        }
+    }
+
+    public drawPixel(position: Vector2, color: Vector3): void {
+        const [width, height] = this._cachedCanvasSize;
+
+        if (
+            position[0] >= width || position[0] < 0
+            || position[1] >= height || position[1] < 0
+        ) {
+            return;
+        }
 
         this._frameBuffer.colors[position[1] * width + position[0]] = toCanvasColorFormat(color);
     }
 
-    public drawFilledRectangle(position: vec2, size: vec2, color: vec3): void {
+    public drawFilledRectangle(position: Vector2, size: Vector2, color: Vector3): void {
         const [x, y] = position;
         const [width, height] = size;
 
@@ -52,7 +112,7 @@ export class Renderer {
         }
     }
 
-    public drawLine(start: vec2, end: vec2, color: vec3): void {
+    public drawLine(start: Vector2, end: Vector2, color: Vector3): void {
         const [startX, startY] = start;
         const [endX, endY] = end;
 
@@ -78,10 +138,10 @@ export class Renderer {
     }
 
     public drawTriangle(
-        vertex1: vec2,
-        vertex2: vec2,
-        vertex3: vec2,
-        color: vec3,
+        vertex1: Vector2,
+        vertex2: Vector2,
+        vertex3: Vector2,
+        color: Vector3,
     ): void {
         this.drawLine(vertex1, vertex2, color);
         this.drawLine(vertex2, vertex3, color);
@@ -89,10 +149,10 @@ export class Renderer {
     }
 
     public drawFilledTriangle(
-        vertex1: vec2,
-        vertex2: vec2,
-        vertex3: vec2,
-        color: vec3,
+        vertex1: Vector2,
+        vertex2: Vector2,
+        vertex3: Vector2,
+        color: Vector3,
     ): void {
         let [x0, y0] = vertex1;
         let [x1, y1] = vertex2;
@@ -139,7 +199,7 @@ export class Renderer {
         x0: number, y0: number,
         x1: number, y1: number,
         x2: number, y2: number,
-        color: vec3,
+        color: Vector3,
     ): void {
         if (y1 - y0 == 0 || y2 - y0 == 0) {
             return;
@@ -163,7 +223,7 @@ export class Renderer {
         x0: number, y0: number,
         x1: number, y1: number,
         x2: number, y2: number,
-        color: vec3,
+        color: Vector3,
     ): void {
         if (y2 - y0 == 0 || y2 - y1 == 0) {
             return;
@@ -200,10 +260,19 @@ export class Renderer {
             colors: colorBuffer,
         };
     }
+
+    private _transform_to_viewport_center(v: Vector4): Vector2 {
+        const [width, height] = this._cachedCanvasSize;
+
+        return [
+            (v[0] + 1) / 2 * width,
+            (1 - v[1]) / 2 * height,
+        ];
+    }
 }
 
 // RGBA to AABBGGRR
-function toCanvasColorFormat(color: vec3, a: number = 255): number {
+function toCanvasColorFormat(color: Vector3, a: number = 255): number {
     const [r, g, b] = color;
 
     return (a << 24) | (b << 16) | (g << 8) | r;

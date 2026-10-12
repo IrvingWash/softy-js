@@ -1,12 +1,12 @@
-import { vec3 } from "gl-matrix";
+import { Vector3 } from "./math";
 
 export interface ObjData {
-    vertices: vec3[];
+    vertices: Vector3[];
     faces: ObjFace[];
 }
 
 export interface ObjFace {
-    vertex_indices: vec3;
+    vertexIndices: Vector3;
 }
 
 const OBJ_INDEX_OFFSET = 1;
@@ -30,24 +30,24 @@ export function parseObj(data: string): ObjData {
             // v x y z
 
             objData.vertices.push(
-                line.split(VERTEX_PREFIX)[1].split(" ").map(Number)
+                line.split(VERTEX_PREFIX)[1].split(" ").map(Number) as Vector3
             );
         } else if (line.startsWith(FACE_PREFIX)) {
             // f v/uv/n
 
             const vertices = line.split(FACE_PREFIX)[1].split(" ");
 
-            const vertex_indices: vec3 = [0, 0, 0];
+            const vertexIndices: Vector3 = [0, 0, 0];
             let i = 0;
             for (const vertex of vertices) {
                 const [v] = vertex.split("/").map(Number);
 
-                vertex_indices[i] = v - OBJ_INDEX_OFFSET;
+                vertexIndices[i] = v - OBJ_INDEX_OFFSET;
 
                 i++;
             }
 
-            objData.faces.push({ vertex_indices });
+            objData.faces.push({ vertexIndices });
         }
     }
 

@@ -1,4 +1,4 @@
-import { vec2 } from "gl-matrix";
+import { Vector2 } from "./math";
 
 const MAIN_CANVAS_ID = "mainCanvas";
 
@@ -34,7 +34,7 @@ export class Canvas {
         return this.create(window.innerWidth * dpr, window.innerHeight * dpr);
     }
 
-    public getPixelSize(): vec2 {
+    public getPixelSize(): Vector2 {
         return [this._element.width, this._element.height];
     }
 
