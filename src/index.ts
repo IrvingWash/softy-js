@@ -85,7 +85,7 @@ class App {
 
     public async init(): Promise<void> {
         this._entity = new Entity(
-            [0, 0, 10],
+            [0, 0, 5],
             [2, 2, 2],
             [0, 0, 0],
             await this._loadModel("assets/models/f22.obj"),
@@ -195,7 +195,6 @@ class App {
             clearColorLabel.innerText = "Clear color"
             clearColorWrapper.appendChild(clearColorLabel);
 
-            console.log(this._renderer.getClearColor());
             const colorInput = document.createElement("input");
             colorInput.type = "color";
             colorInput.value = "#" + this._renderer.getClearColor()
