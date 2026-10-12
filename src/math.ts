@@ -4,6 +4,11 @@ export type Vector2 = [number, number];
 export type Vector3 = [number, number, number];
 export type Vector4 = [number, number, number, number];
 
+export interface BarycentricWeights {
+    alpha: number;
+    beta: number;
+    gamma: number;
+}
 
 export function makeMatrix4Identity(): Matrix4 {
     return [
@@ -202,12 +207,25 @@ export function makeEmptyVector3(): Vector3 {
     return [0, 0, 0];
 }
 
+export function makeEmptyVector2(): Vector2 {
+    return [0, 0];
+}
+
 export function subtractVector3s(a: Vector3, b: Vector3): Vector3 {
     const result = makeEmptyVector3();
 
     result[0] = a[0] - b[0];
     result[1] = a[1] - b[1];
     result[2] = a[2] - b[2];
+
+    return result;
+}
+
+export function subtractVector2s(a: Vector2, b: Vector2): Vector2 {
+    const result = makeEmptyVector2();
+
+    result[0] = a[0] - b[0];
+    result[1] = a[1] - b[1];
 
     return result;
 }
@@ -233,6 +251,10 @@ export function crossProduct(a: Vector3, b: Vector3): Vector3 {
         a[2] * b[0] - a[0] * b[2],
         a[0] * b[1] - a[1] * b[0],
     ];
+}
+
+export function crossProductVector2(a: Vector2, b: Vector2): number {
+    return a[0] * b[1] - a[1] * b[0];
 }
 
 export function magnitude(v: Vector3): number {
@@ -265,3 +287,22 @@ export function scaleVector3(v: Vector3, s: number): Vector3 {
 export function clamp(v: number, min: number, max: number): number {
     return Math.min(Math.max(v, min), max);
 };
+
+export function calculateBarycentricWeights(a: Vector2, b: Vector2, c: Vector2, p: Vector2): BarycentricWeights {
+    const ac = subtractVector2s(c, a);
+    const ab = subtractVector2s(b, a);
+    const pc = subtractVector2s(c, p);
+    const pb = subtractVector2s(b, p);
+    const ap = subtractVector2s(p, a);
+
+    const doubledTriangleArea = crossProductVector2(ac, ab);
+
+    const alpha = crossProductVector2(pc, pb) / doubledTriangleArea;
+    const beta = crossProductVector2(ac, ap) / doubledTriangleArea;
+
+    return {
+        alpha,
+        beta,
+        gamma: 1 - alpha - beta,
+    }
+}

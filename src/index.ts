@@ -38,11 +38,7 @@ class Entity {
         this.objData = objData;
     }
 
-    public update(deltaTime: number) {
-        this.rotation[0] += 0.25 * deltaTime;
-        this.rotation[1] += 0.25 * deltaTime;
-        this.rotation[2] += 0.25 * deltaTime;
-    }
+    public update(_deltaTime: number) {}
 
     public getModelTransform(): Matrix4 {
         const translation = makeTranslationMatrix(this.position);
@@ -88,7 +84,7 @@ class App {
             [0, 0, 5],
             [2, 2, 2],
             [0, 0, 0],
-            await this._loadModel("assets/models/f22.obj"),
+            await this._loadModel("assets/models/drone.obj"),
         );
 
         this._renderer.setClearColor(CLEAR_COLOR);
@@ -158,7 +154,7 @@ class App {
 
         const menuItemWrapperMargin = "0 0 5px 0";
 
-        { // Const hide/unhide
+        { // Hide/unhide
             const button = document.createElement("button");
             button.style.width = "40px";
             button.innerText = "Hide";
@@ -184,182 +180,273 @@ class App {
             });
         }
 
-        { // Clear color
-            const clearColorWrapper = document.createElement("div");
-            clearColorWrapper.style.display = "flex";
-            clearColorWrapper.style.justifyContent = "space-between";
-            clearColorWrapper.style.margin = menuItemWrapperMargin;
-            menuWrapper.appendChild(clearColorWrapper);
+        { // Entity
+            const entityWrapper = document.createElement("div");
+            entityWrapper.style.display = "flex";
+            entityWrapper.style.flexDirection = "column";
+            entityWrapper.style.justifyContent = "space-between";
+            entityWrapper.style.marginBottom = "20px";
+            menuWrapper.appendChild(entityWrapper);
 
-            const clearColorLabel = document.createElement("label");
-            clearColorLabel.innerText = "Clear color"
-            clearColorWrapper.appendChild(clearColorLabel);
+            const entityTitle = document.createElement("h3");
+            entityTitle.innerText = "Entity";
+            entityWrapper.appendChild(entityTitle);
 
-            const colorInput = document.createElement("input");
-            colorInput.type = "color";
-            colorInput.value = "#" + this._renderer.getClearColor()
-                .map(c => Math.round(c).toString(16).padStart(2, "0"))
-                .join("");
-            clearColorWrapper.appendChild(colorInput);
+            { // Rotation
+                { // X
+                    const rotationXWrapper = document.createElement("div");
+                    rotationXWrapper.style.display = "flex";
+                    rotationXWrapper.style.justifyContent = "space-between";
+                    entityWrapper.appendChild(rotationXWrapper);
 
-            colorInput.addEventListener("input", () => this._renderer.setClearColor([
-                parseInt(colorInput.value.slice(1, 3), 16),
-                parseInt(colorInput.value.slice(3, 5), 16),
-                parseInt(colorInput.value.slice(5, 7), 16),
-            ]));
-        }
+                    const rotationXLabel = document.createElement("label");
+                    rotationXLabel.innerText = "Rotation X";
+                    rotationXWrapper.appendChild(rotationXLabel);
 
-        { // Polygon mode
-            const polygonModeWrapper = document.createElement("div");
-            polygonModeWrapper.style.display = "flex";
-            polygonModeWrapper.style.justifyContent = "space-between";
-            polygonModeWrapper.style.margin = menuItemWrapperMargin;
-            menuWrapper.appendChild(polygonModeWrapper);
+                    const rotationXInput = document.createElement("input");
+                    rotationXInput.type = "number";
+                    rotationXInput.value = String(this._entity!.rotation[0]);
+                    rotationXInput.step = "0.1";
+                    rotationXWrapper.appendChild(rotationXInput);
 
-            const polygonModeLabel = document.createElement("label");
-            polygonModeLabel.innerText = "Polygon mode"
-            polygonModeWrapper.appendChild(polygonModeLabel);
-
-            const polygonModeDropDown = document.createElement("select");
-            polygonModeWrapper.appendChild(polygonModeDropDown);
-
-            for (const variant of Object.values(PolygonMode)) {
-                const option = document.createElement("option");
-                option.value = variant;
-                option.innerText = variant;
-                
-                polygonModeDropDown.appendChild(option);
-            }
-
-            polygonModeDropDown.value = this._renderer.getPolygonMode();
-
-            polygonModeDropDown.addEventListener("change", () => this._renderer.setPolygonMode(polygonModeDropDown.value as PolygonMode));
-        }
-
-        { // Cull mode
-            const cullModeWrapper = document.createElement("div");
-            cullModeWrapper.style.display = "flex";
-            cullModeWrapper.style.justifyContent = "space-between";
-            cullModeWrapper.style.margin = menuItemWrapperMargin;
-            menuWrapper.appendChild(cullModeWrapper);
-
-            const cullModeLabel = document.createElement("label");
-            cullModeLabel.innerText = "Cull mode"
-            cullModeWrapper.appendChild(cullModeLabel);
-
-            const cullModeDropDown = document.createElement("select");
-            cullModeWrapper.appendChild(cullModeDropDown);
-
-            for (const variant of Object.values(CullMode)) {
-                const option = document.createElement("option");
-                option.value = variant;
-                option.innerText = variant;
-
-                cullModeDropDown.appendChild(option);
-            }
-
-            cullModeDropDown.value = this._renderer.getCullMode();
-
-            cullModeDropDown.addEventListener("change", () => this._renderer.setCullMode(cullModeDropDown.value as CullMode));
-        }
-
-        { // Directional Light
-            const directionalLightWrapper = document.createElement("div");
-            directionalLightWrapper.style.display = "flex";
-            directionalLightWrapper.style.justifyContent = "space-between";
-            directionalLightWrapper.style.margin = menuItemWrapperMargin;
-            menuWrapper.appendChild(directionalLightWrapper);
-
-            const directionalLightLabel = document.createElement("label");
-            directionalLightLabel.innerText = "Directional light";
-            directionalLightWrapper.appendChild(directionalLightLabel);
-
-            { // Color
-                const colorInput = document.createElement("input");
-                colorInput.type = "color";
-                colorInput.value = "#" + (this._renderer.getDirectionalLight()?.color ?? SUN_COLOR)
-                    .map(c => Math.round(c).toString(16).padStart(2, "0"))
-                    .join("");
-                directionalLightWrapper.appendChild(colorInput);
-
-                colorInput.addEventListener("input", () => {
-                    const currentDirection = this._renderer.getDirectionalLight()?.direction ?? SUN_DIRECTION;
-
-                    this._renderer.setDirectionalLight(
-                        {
-                            direction: currentDirection,
-                            color: [
-                                parseInt(colorInput.value.slice(1, 3), 16),
-                                parseInt(colorInput.value.slice(3, 5), 16),
-                                parseInt(colorInput.value.slice(5, 7), 16),
-                            ]
-                        }
-                    );
-                });
-            }
-
-            { // Direction
-                function createSlider(initialValue: number): HTMLInputElement {
-                    const slider = document.createElement("input");
-                    slider.value = String(initialValue);
-                    slider.type = "range";
-                    slider.min = "0";
-                    slider.max = "1";
-                    slider.step = "0.05";
-                    slider.style.width = "50px";
-
-                    return slider;
+                    rotationXInput.addEventListener("input", () => {
+                        this._entity!.rotation[0] = Number(rotationXInput.value);
+                    });
                 }
 
-                const currentDirection = this._renderer.getDirectionalLight()?.direction ?? SUN_DIRECTION;
+                { // Y
+                    const rotationYWrapper = document.createElement("div");
+                    rotationYWrapper.style.display = "flex";
+                    rotationYWrapper.style.justifyContent = "space-between";
+                    entityWrapper.appendChild(rotationYWrapper);
 
-                const xSlider = createSlider(currentDirection[0]);
-                const ySlider = createSlider(currentDirection[1]);
-                const zSlider = createSlider(currentDirection[2]);
+                    const rotationYLabel = document.createElement("label");
+                    rotationYLabel.innerText = "Rotation Y";
+                    rotationYWrapper.appendChild(rotationYLabel);
 
-                directionalLightWrapper.appendChild(xSlider);
-                directionalLightWrapper.appendChild(ySlider);
-                directionalLightWrapper.appendChild(zSlider);
+                    const rotationYInput = document.createElement("input");
+                    rotationYInput.type = "number";
+                    rotationYInput.value = String(this._entity!.rotation[1]);
+                    rotationYInput.step = "0.1";
+                    rotationYWrapper.appendChild(rotationYInput);
 
-                xSlider.addEventListener("input", () => {
-                    const currentDirectionalLight = this._renderer.getDirectionalLight() ?? {
-                        color: SUN_COLOR,
-                        direction: SUN_DIRECTION,
+                    rotationYInput.addEventListener("input", () => {
+                        this._entity!.rotation[1] = Number(rotationYInput.value);
+                    });
+                }
+
+                { // Z
+                    const rotationZWrapper = document.createElement("div");
+                    rotationZWrapper.style.display = "flex";
+                    rotationZWrapper.style.justifyContent = "space-between";
+                    entityWrapper.appendChild(rotationZWrapper);
+
+                    const rotationZLabel = document.createElement("label");
+                    rotationZLabel.innerText = "Rotation Z";
+                    rotationZWrapper.appendChild(rotationZLabel);
+
+                    const rotationZInput = document.createElement("input");
+                    rotationZInput.type = "number";
+                    rotationZInput.value = String(this._entity!.rotation[1]);
+                    rotationZInput.step = "0.1";
+                    rotationZWrapper.appendChild(rotationZInput);
+
+                    rotationZInput.addEventListener("input", () => {
+                        this._entity!.rotation[1] = Number(rotationZInput.value);
+                    });
+                }
+            }
+        }
+
+        { // Renderer
+            const rendererWrapper = document.createElement("div");
+            rendererWrapper.style.display = "flex";
+            rendererWrapper.style.flexDirection = "column";
+            rendererWrapper.style.justifyContent = "space-between";
+            rendererWrapper.style.marginBottom = "20px";
+            menuWrapper.appendChild(rendererWrapper);
+
+            const rendererTitle = document.createElement("h3");
+            rendererTitle.innerText = "Renderer";
+            rendererWrapper.appendChild(rendererTitle);
+
+            { // Clear color
+                const clearColorWrapper = document.createElement("div");
+                clearColorWrapper.style.display = "flex";
+                clearColorWrapper.style.justifyContent = "space-between";
+                clearColorWrapper.style.margin = menuItemWrapperMargin;
+                rendererWrapper.appendChild(clearColorWrapper);
+
+                const clearColorLabel = document.createElement("label");
+                clearColorLabel.innerText = "Clear color"
+                clearColorWrapper.appendChild(clearColorLabel);
+
+                const colorInput = document.createElement("input");
+                colorInput.type = "color";
+                colorInput.value = "#" + this._renderer.getClearColor()
+                    .map(c => Math.round(c).toString(16).padStart(2, "0"))
+                    .join("");
+                clearColorWrapper.appendChild(colorInput);
+
+                colorInput.addEventListener("input", () => this._renderer.setClearColor([
+                    parseInt(colorInput.value.slice(1, 3), 16),
+                    parseInt(colorInput.value.slice(3, 5), 16),
+                    parseInt(colorInput.value.slice(5, 7), 16),
+                ]));
+            }
+
+            { // Polygon mode
+                const polygonModeWrapper = document.createElement("div");
+                polygonModeWrapper.style.display = "flex";
+                polygonModeWrapper.style.justifyContent = "space-between";
+                polygonModeWrapper.style.margin = menuItemWrapperMargin;
+                rendererWrapper.appendChild(polygonModeWrapper);
+
+                const polygonModeLabel = document.createElement("label");
+                polygonModeLabel.innerText = "Polygon mode"
+                polygonModeWrapper.appendChild(polygonModeLabel);
+
+                const polygonModeDropDown = document.createElement("select");
+                polygonModeWrapper.appendChild(polygonModeDropDown);
+
+                for (const variant of Object.values(PolygonMode)) {
+                    const option = document.createElement("option");
+                    option.value = variant;
+                    option.innerText = variant;
+                    
+                    polygonModeDropDown.appendChild(option);
+                }
+
+                polygonModeDropDown.value = this._renderer.getPolygonMode();
+
+                polygonModeDropDown.addEventListener("change", () => this._renderer.setPolygonMode(polygonModeDropDown.value as PolygonMode));
+            }
+
+            { // Cull mode
+                const cullModeWrapper = document.createElement("div");
+                cullModeWrapper.style.display = "flex";
+                cullModeWrapper.style.justifyContent = "space-between";
+                cullModeWrapper.style.margin = menuItemWrapperMargin;
+                rendererWrapper.appendChild(cullModeWrapper);
+
+                const cullModeLabel = document.createElement("label");
+                cullModeLabel.innerText = "Cull mode"
+                cullModeWrapper.appendChild(cullModeLabel);
+
+                const cullModeDropDown = document.createElement("select");
+                cullModeWrapper.appendChild(cullModeDropDown);
+
+                for (const variant of Object.values(CullMode)) {
+                    const option = document.createElement("option");
+                    option.value = variant;
+                    option.innerText = variant;
+
+                    cullModeDropDown.appendChild(option);
+                }
+
+                cullModeDropDown.value = this._renderer.getCullMode();
+
+                cullModeDropDown.addEventListener("change", () => this._renderer.setCullMode(cullModeDropDown.value as CullMode));
+            }
+
+            { // Directional Light
+                const directionalLightWrapper = document.createElement("div");
+                directionalLightWrapper.style.display = "flex";
+                directionalLightWrapper.style.justifyContent = "space-between";
+                directionalLightWrapper.style.margin = menuItemWrapperMargin;
+                rendererWrapper.appendChild(directionalLightWrapper);
+
+                const directionalLightLabel = document.createElement("label");
+                directionalLightLabel.innerText = "Directional light";
+                directionalLightWrapper.appendChild(directionalLightLabel);
+
+                { // Color
+                    const colorInput = document.createElement("input");
+                    colorInput.type = "color";
+                    colorInput.value = "#" + (this._renderer.getDirectionalLight()?.color ?? SUN_COLOR)
+                        .map(c => Math.round(c).toString(16).padStart(2, "0"))
+                        .join("");
+                    directionalLightWrapper.appendChild(colorInput);
+
+                    colorInput.addEventListener("input", () => {
+                        const currentDirection = this._renderer.getDirectionalLight()?.direction ?? SUN_DIRECTION;
+
+                        this._renderer.setDirectionalLight(
+                            {
+                                direction: currentDirection,
+                                color: [
+                                    parseInt(colorInput.value.slice(1, 3), 16),
+                                    parseInt(colorInput.value.slice(3, 5), 16),
+                                    parseInt(colorInput.value.slice(5, 7), 16),
+                                ]
+                            }
+                        );
+                    });
+                }
+
+                { // Direction
+                    function createSlider(initialValue: number): HTMLInputElement {
+                        const slider = document.createElement("input");
+                        slider.value = String(initialValue);
+                        slider.type = "range";
+                        slider.min = "0";
+                        slider.max = "1";
+                        slider.step = "0.05";
+                        slider.style.width = "50px";
+
+                        return slider;
                     }
 
-                    this._renderer.setDirectionalLight(
-                        {
-                            color: [...currentDirectionalLight.color],
-                            direction: [Number(xSlider.value), currentDirectionalLight.direction[1], currentDirectionalLight.direction[2]],
-                        }
-                    );
-                });
-                ySlider.addEventListener("input", () => {
-                    const currentDirectionalLight = this._renderer.getDirectionalLight() ?? {
-                        color: SUN_COLOR,
-                        direction: SUN_DIRECTION,
-                    }
+                    const currentDirection = this._renderer.getDirectionalLight()?.direction ?? SUN_DIRECTION;
 
-                    this._renderer.setDirectionalLight(
-                        {
-                            color: [...currentDirectionalLight.color],
-                            direction: [currentDirectionalLight.direction[0], Number(ySlider.value), currentDirectionalLight.direction[2]],
-                        }
-                    );
-                });
-                zSlider.addEventListener("input", () => {
-                    const currentDirectionalLight = this._renderer.getDirectionalLight() ?? {
-                        color: SUN_COLOR,
-                        direction: SUN_DIRECTION,
-                    }
+                    const xSlider = createSlider(currentDirection[0]);
+                    const ySlider = createSlider(currentDirection[1]);
+                    const zSlider = createSlider(currentDirection[2]);
 
-                    this._renderer.setDirectionalLight(
-                        {
-                            color: [...currentDirectionalLight.color],
-                            direction: [currentDirectionalLight.direction[0], currentDirectionalLight.direction[1], Number(zSlider.value)],
+                    directionalLightWrapper.appendChild(xSlider);
+                    directionalLightWrapper.appendChild(ySlider);
+                    directionalLightWrapper.appendChild(zSlider);
+
+                    xSlider.addEventListener("input", () => {
+                        const currentDirectionalLight = this._renderer.getDirectionalLight() ?? {
+                            color: SUN_COLOR,
+                            direction: SUN_DIRECTION,
                         }
-                    );
-                });
+
+                        this._renderer.setDirectionalLight(
+                            {
+                                color: [...currentDirectionalLight.color],
+                                direction: [Number(xSlider.value), currentDirectionalLight.direction[1], currentDirectionalLight.direction[2]],
+                            }
+                        );
+                    });
+                    ySlider.addEventListener("input", () => {
+                        const currentDirectionalLight = this._renderer.getDirectionalLight() ?? {
+                            color: SUN_COLOR,
+                            direction: SUN_DIRECTION,
+                        }
+
+                        this._renderer.setDirectionalLight(
+                            {
+                                color: [...currentDirectionalLight.color],
+                                direction: [currentDirectionalLight.direction[0], Number(ySlider.value), currentDirectionalLight.direction[2]],
+                            }
+                        );
+                    });
+                    zSlider.addEventListener("input", () => {
+                        const currentDirectionalLight = this._renderer.getDirectionalLight() ?? {
+                            color: SUN_COLOR,
+                            direction: SUN_DIRECTION,
+                        }
+
+                        this._renderer.setDirectionalLight(
+                            {
+                                color: [...currentDirectionalLight.color],
+                                direction: [currentDirectionalLight.direction[0], currentDirectionalLight.direction[1], Number(zSlider.value)],
+                            }
+                        );
+                    });
+                }
             }
         }
     }
