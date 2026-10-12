@@ -200,17 +200,17 @@ export class Renderer {
             switch (this._polygonMode) {
                 case PolygonMode.Filled:
                     this._drawFilledTriangle(
-                        this._transform_to_viewport_center(a),
-                        this._transform_to_viewport_center(b),
-                        this._transform_to_viewport_center(c),
+                        this._transformToViewportCenter(a),
+                        this._transformToViewportCenter(b),
+                        this._transformToViewportCenter(c),
                         triangleToRender.color,
                     );
                     break;
                 case PolygonMode.Wireframe:
                     this._drawTriangle(
-                        this._transform_to_viewport_center(a),
-                        this._transform_to_viewport_center(b),
-                        this._transform_to_viewport_center(c),
+                        this._transformToViewportCenter(a),
+                        this._transformToViewportCenter(b),
+                        this._transformToViewportCenter(c),
                         triangleToRender.color,
                     );
                     break;
@@ -392,7 +392,7 @@ export class Renderer {
         };
     }
 
-    private _transform_to_viewport_center(v: Vector4): Vector2 {
+    private _transformToViewportCenter(v: Vector4): Vector2 {
         const [width, height] = this._cachedCanvasSize;
 
         return [
