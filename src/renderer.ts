@@ -84,7 +84,7 @@ export class Renderer {
             const b = projected[face.vertexIndices[1]];
             const c = projected[face.vertexIndices[2]];
 
-            this.drawFilledTriangle(
+            this._drawFilledTriangle(
                 this._transform_to_viewport_center(a),
                 this._transform_to_viewport_center(b),
                 this._transform_to_viewport_center(c),
@@ -93,7 +93,7 @@ export class Renderer {
         }
     }
 
-    public drawPixel(position: Vector2, color: Vector3): void {
+    private _drawPixel(position: Vector2, color: Vector3): void {
         const [width, height] = this._cachedCanvasSize;
 
         if (
@@ -106,18 +106,18 @@ export class Renderer {
         this._frameBuffer.colors[position[1] * width + position[0]] = toCanvasColorFormat(color);
     }
 
-    public drawFilledRectangle(position: Vector2, size: Vector2, color: Vector3): void {
+    private _drawFilledRectangle(position: Vector2, size: Vector2, color: Vector3): void {
         const [x, y] = position;
         const [width, height] = size;
 
         for (let w = 0; w < width; w++) {
             for (let h = 0; h < height; h++) {
-                this.drawPixel([x + w, y + h], color);
+                this._drawPixel([x + w, y + h], color);
             }
         }
     }
 
-    public drawLine(start: Vector2, end: Vector2, color: Vector3): void {
+    private _drawLine(start: Vector2, end: Vector2, color: Vector3): void {
         const [startX, startY] = start;
         const [endX, endY] = end;
 
@@ -135,25 +135,25 @@ export class Renderer {
         let currentY = startY;
 
         for (let i = 0; i <= longestSideLength; i++) {
-            this.drawPixel([Math.round(currentX), Math.round(currentY)], color);
+            this._drawPixel([Math.round(currentX), Math.round(currentY)], color);
 
             currentX += xStep;
             currentY += yStep;
         }
     }
 
-    public drawTriangle(
+    private _drawTriangle(
         vertex1: Vector2,
         vertex2: Vector2,
         vertex3: Vector2,
         color: Vector3,
     ): void {
-        this.drawLine(vertex1, vertex2, color);
-        this.drawLine(vertex2, vertex3, color);
-        this.drawLine(vertex3, vertex1, color);
+        this._drawLine(vertex1, vertex2, color);
+        this._drawLine(vertex2, vertex3, color);
+        this._drawLine(vertex3, vertex1, color);
     }
 
-    public drawFilledTriangle(
+    private _drawFilledTriangle(
         vertex1: Vector2,
         vertex2: Vector2,
         vertex3: Vector2,
@@ -217,7 +217,7 @@ export class Renderer {
         let endX = x0;
 
         for (let y = y0; y <= y2; y++) {
-            this.drawLine([startX, y], [endX, y], color);
+            this._drawLine([startX, y], [endX, y], color);
 
             startX += inverseSlope1;
             endX += inverseSlope2;
@@ -241,7 +241,7 @@ export class Renderer {
         let endX = x2;
 
         for (let y = y2; y >= y0; y--) {
-            this.drawLine([startX, y], [endX, y], color);
+            this._drawLine([startX, y], [endX, y], color);
 
             startX -= inverseSlope1;
             endX -= inverseSlope2;
