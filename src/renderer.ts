@@ -415,7 +415,6 @@ export class Renderer {
     }
 
     private _onResize = () => {
-        console.log("resized");
         this._cachedCanvasSize = this._canvas.getPixelSize();
 
         this._frameBuffer = this._createFrameBuffer();

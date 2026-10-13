@@ -57,6 +57,24 @@ const CLEAR_COLOR: Vector3 = [135, 206, 235];
 const SUN_COLOR: Vector3 = [255, 255, 255];
 const SUN_DIRECTION: Vector3 = [0, 0, 1];
 
+const MODEL_CATALOG = {
+    f22: {
+        path: "assets/models/f22.obj",
+        scale: [1, 1, 1] as Vector3,
+        rotation: [-0.6, 0, 0] as Vector3,
+    },
+    drone: {
+        path: "assets/models/drone.obj",
+        scale: [1, 1, 1] as Vector3,
+        rotation: [0, 0, 0] as Vector3,
+    },
+    vikingRoom: {
+        path: "assets/models/viking-room.obj",
+        scale: [0.1, 0.1, 0.1] as Vector3,
+        rotation: [0.4, -3.2, 0] as Vector3,
+    },
+} as const;
+
 class App {
     private readonly _renderer: Renderer;
 
@@ -66,6 +84,8 @@ class App {
     private _previousFrameTime: number = 0;
 
     private _isGuiVisible: boolean = true;
+
+    private _currentModelKey: keyof typeof MODEL_CATALOG = "f22";
 
     public constructor() {
         const canvas = Canvas.createFullscreen();
@@ -83,9 +103,9 @@ class App {
     public async init(): Promise<void> {
         this._entity = new Entity(
             [0, 0, 5],
-            [2, 2, 2],
-            [0, 0, 0],
-            await this._loadModel("assets/models/drone.obj"),
+            MODEL_CATALOG[this._currentModelKey].scale,
+            MODEL_CATALOG[this._currentModelKey].rotation,
+            await this._loadModel(MODEL_CATALOG[this._currentModelKey].path),
         );
 
         this._renderer.setClearColor(CLEAR_COLOR);
@@ -174,11 +194,20 @@ class App {
                         child.style.display = "none";
                     } else {
                         child.style.display = "flex"; // This is stupid, but looks ok for now
+                        button.innerText = "Hide";
                     }
                 }
 
                 this._isGuiVisible = !this._isGuiVisible;
             });
+        }
+
+        { // FPS
+            const fpsDisplay = document.createElement("p");
+
+            setInterval(() => fpsDisplay.innerText = `FPS: ${Math.round(1 / this._deltaTime)}`, 1000);
+
+            menuWrapper.appendChild(fpsDisplay);
         }
 
         { // Entity
@@ -192,6 +221,33 @@ class App {
             const entityTitle = document.createElement("h3");
             entityTitle.innerText = "Entity";
             entityWrapper.appendChild(entityTitle);
+
+            { // Model
+                const modelDropdown = document.createElement("select");
+                entityWrapper.appendChild(modelDropdown);
+
+                for (const modelKey of Object.keys(MODEL_CATALOG)) {
+                    const option = document.createElement("option");
+                    option.value = modelKey;
+                    option.innerText = modelKey;
+                    
+                    modelDropdown.appendChild(option);
+                }
+
+                modelDropdown.value = this._currentModelKey;
+
+
+                modelDropdown.addEventListener("change", async () => {
+                    this._currentModelKey = modelDropdown.value as keyof typeof MODEL_CATALOG;
+
+                    this._entity = new Entity(
+                        [0, 0, 5],
+                        MODEL_CATALOG[this._currentModelKey].scale,
+                        MODEL_CATALOG[this._currentModelKey].rotation,
+                        await this._loadModel(MODEL_CATALOG[this._currentModelKey].path),
+                    );
+                });
+            }
 
             { // Rotation
                 { // X

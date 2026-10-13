@@ -1,5 +1,7 @@
 # SoftyJS
 
+[Demo](https://irvingwash.github.io/softy-js/)
+
 SoftyJS is a port of softy, a software 3D renderer, from Jai to TypeScript.
 The port, as the original project, is written completely by hand.
 
