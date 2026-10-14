@@ -120,6 +120,8 @@ class App {
         lastY: 0,
     };
 
+    private _paused: boolean = false;
+
     public constructor() {
         this._canvas = Canvas.createFullscreen();
 
@@ -174,6 +176,11 @@ class App {
 
     private _render(): void {
         this._renderer.startDrawing(this._camera);
+
+        if (this._paused) {
+            this._renderer.finishDrawing();
+            return;
+        }
 
         if (this._entity) {
             this._renderer.draw(
@@ -238,7 +245,7 @@ class App {
     private _createGui() { // This is a dumpster...
         const menuWrapper = document.createElement("div");
         menuWrapper.style.zIndex = "999";
-        menuWrapper.style.position = "absolute";
+        menuWrapper.style.position = "fixed";
         menuWrapper.style.backgroundColor = "white";
         menuWrapper.style.margin = "5px";
         menuWrapper.style.padding = "5px";
@@ -305,14 +312,32 @@ class App {
 
                 modelDropdown.value = this._currentModelKey;
 
+                // @Todo: It would be good to cancel a previously loading model, if it's not done yet, but I don't care for now
                 modelDropdown.addEventListener("change", async () => {
                     this._currentModelKey = modelDropdown.value as keyof typeof MODEL_CATALOG;
+
+                    this._paused = true;
+                    const loadingDisplay = document.createElement("p");
+                    loadingDisplay.style.position = "fixed";
+                    loadingDisplay.style.zIndex = "999";
+                    loadingDisplay.style.textAlign = "center";
+                    loadingDisplay.style.top = "50%";
+                    loadingDisplay.style.left = "50%";
+                    const clearColor = this._renderer.getClearColor();
+                    loadingDisplay.style.color = `rgb(${255 - clearColor[0]}, ${255 - clearColor[1]}, ${255 - clearColor[2]})`;
+                    loadingDisplay.innerText = "Loading...";
+                    document.body.appendChild(loadingDisplay);
+
+                    const model = await this._loadModel(MODEL_CATALOG[this._currentModelKey]);
+
+                    this._paused = false;
+                    document.body.removeChild(loadingDisplay);
 
                     this._entity = new Entity(
                         [0, 0, 5],
                         MODEL_CATALOG[this._currentModelKey].scale,
                         MODEL_CATALOG[this._currentModelKey].rotation,
-                        await this._loadModel(MODEL_CATALOG[this._currentModelKey]),
+                        model,
                     );
                 });
             }

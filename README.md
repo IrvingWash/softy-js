@@ -36,3 +36,6 @@ There are four independent libraries:
 
 And an example:
 - `index.ts` - The application which calls into the above libraries. Contains a "game loop" and GUI controls
+
+## What's not ported from the origina project
+- Clipping
