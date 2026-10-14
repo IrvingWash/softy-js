@@ -247,6 +247,7 @@ class App {
 
         { // FPS
             const fpsDisplay = document.createElement("p");
+            fpsDisplay.innerText = "FPS: 0";
 
             setInterval(() => fpsDisplay.innerText = `FPS: ${Math.round(1 / this._deltaTime)}`, 1000);
 

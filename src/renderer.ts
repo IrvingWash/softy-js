@@ -232,7 +232,7 @@ export class Renderer {
         }
 
         // Just a simple painters algorithm for now. @Todo
-        if (this._depthTesting) {
+        if (this._depthTesting && this._renderMode != RenderMode.Textured) {
             trianglesToRender.sort((a, b) => b.positions[0][2] - a.positions[0][2]);
         }
 
@@ -412,14 +412,14 @@ export class Renderer {
         }
 
         // Upper half
-        if (Math.abs(y1 - y0) >= 1) {
+        if (y1 - y0 != 0) {
             let leftInverseSlope = 0;
             let rightInverseSlope = 0;
 
-            if (Math.abs(y1 - y0) >= 1) {
+            if (y1 - y0 != 0) {
                 leftInverseSlope = (x1 - x0) / Math.abs(y1 - y0);
             }
-            if (Math.abs(y2 - y0) >= 1) {
+            if (y2 - y0 != 0) {
                 rightInverseSlope = (x2 - x0) / Math.abs(y2 - y0);
             }
 
@@ -446,14 +446,14 @@ export class Renderer {
         }
 
         // Lower half
-        if (Math.abs(y2 - y1) >= 1) {
+        if (y2 - y1 != 0) {
             let leftInverseSlope = 0;
             let rightInverseSlope = 0;
 
-            if (Math.abs(y2 - y1) >= 1) {
+            if (y2 - y1 != 0) {
                 leftInverseSlope = (x2 - x1) / Math.abs(y2 - y1);
             }
-            if (Math.abs(y2 - y0) >= 1) {
+            if (y2 - y0 != 0) {
                 rightInverseSlope = (x2 - x0) / Math.abs(y2 - y0);
             }
 
@@ -605,8 +605,8 @@ export class Renderer {
         const [width, height] = this._cachedCanvasSize;
 
         return [
-            (v[0] + 1) / 2 * width,
-            (1 - v[1]) / 2 * height,
+            Math.trunc((v[0] + 1) / 2 * width),
+            Math.trunc((1 - v[1]) / 2 * height),
             v[2],
             v[3],
         ];
