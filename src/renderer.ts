@@ -412,14 +412,14 @@ export class Renderer {
         }
 
         // Upper half
-        if (y1 - y0 != 0) {
+        if (Math.abs(y1 - y0) >= 1) {
             let leftInverseSlope = 0;
             let rightInverseSlope = 0;
 
-            if (y1 - y0 != 0) {
+            if (Math.abs(y1 - y0) >= 1) {
                 leftInverseSlope = (x1 - x0) / Math.abs(y1 - y0);
             }
-            if (y2 - y0 != 0) {
+            if (Math.abs(y2 - y0) >= 1) {
                 rightInverseSlope = (x2 - x0) / Math.abs(y2 - y0);
             }
 
@@ -446,14 +446,14 @@ export class Renderer {
         }
 
         // Lower half
-        if (y2 - y1 != 0) {
+        if (Math.abs(y2 - y1) >= 1) {
             let leftInverseSlope = 0;
             let rightInverseSlope = 0;
 
-            if (y2 - y1 != 0) {
+            if (Math.abs(y2 - y1) >= 1) {
                 leftInverseSlope = (x2 - x1) / Math.abs(y2 - y1);
             }
-            if (y2 - y0 != 0) {
+            if (Math.abs(y2 - y0) >= 1) {
                 rightInverseSlope = (x2 - x0) / Math.abs(y2 - y0);
             }
 
