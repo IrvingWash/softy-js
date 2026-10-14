@@ -62,11 +62,13 @@ interface ModelMetadata {
     texturePath: string;
     scale: Vector3;
     rotation: Vector3;
+    cullBackfaces: boolean;
 }
 
 interface Model {
     objData: ObjData;
     texture: ImageData;
+    cullBackfaces: boolean;
 }
 
 const MODEL_CATALOG: Record<string, ModelMetadata> = {
@@ -75,16 +77,21 @@ const MODEL_CATALOG: Record<string, ModelMetadata> = {
         texturePath: "assets/models/viking-room.png",
         scale: [0.1, 0.1, 0.1] as Vector3,
         rotation: [0.4, -3.2, 0] as Vector3,
+        cullBackfaces: false,
     },
     f22: {
         path: "assets/models/f22.obj",
         texturePath: "assets/models/f22.png",
         scale: [1, 1, 1] as Vector3,
         rotation: [-0.6, 0, 0] as Vector3,
+        cullBackfaces: false,
     },
 } as const;
 
+const POINTER_SENSITIVITY = 0.005;
+
 class App {
+    private readonly _canvas: Canvas;
     private readonly _renderer: Renderer;
 
     private _camera: Camera;
@@ -96,10 +103,18 @@ class App {
 
     private _currentModelKey: keyof typeof MODEL_CATALOG = "vikingRoom";
 
-    public constructor() {
-        const canvas = Canvas.createFullscreen();
+    private _dragState = {
+        isDragging: false,
+        yaw: 0,
+        pitch: 0,
+        lastX: 0,
+        lastY: 0,
+    };
 
-        this._renderer = new Renderer(canvas);
+    public constructor() {
+        this._canvas = Canvas.createFullscreen();
+
+        this._renderer = new Renderer(this._canvas);
 
         this._camera = {
             position: [0, 0, 0],
@@ -146,6 +161,8 @@ class App {
         this._renderer.startDrawing(this._camera);
 
         if (this._entity) {
+            this._renderer.setCullMode(this._entity.model.cullBackfaces ? CullMode.BackFace : CullMode.None);
+
             this._renderer.draw(
                 this._entity.model.objData.vertices,
                 this._entity.model.objData.uvs,
@@ -201,6 +218,7 @@ class App {
         return {
             objData,
             texture: image,
+            cullBackfaces: metadata.cullBackfaces,
         }
     }
 
@@ -245,15 +263,6 @@ class App {
             });
         }
 
-        { // FPS
-            const fpsDisplay = document.createElement("p");
-            fpsDisplay.innerText = "FPS: 0";
-
-            setInterval(() => fpsDisplay.innerText = `FPS: ${Math.round(1 / this._deltaTime)}`, 1000);
-
-            menuWrapper.appendChild(fpsDisplay);
-        }
-
         { // Entity
             const entityWrapper = document.createElement("div");
             entityWrapper.style.display = "flex";
@@ -280,7 +289,6 @@ class App {
 
                 modelDropdown.value = this._currentModelKey;
 
-
                 modelDropdown.addEventListener("change", async () => {
                     this._currentModelKey = modelDropdown.value as keyof typeof MODEL_CATALOG;
 
@@ -293,69 +301,52 @@ class App {
                 });
             }
 
-            { // Rotation
-                { // X
-                    const rotationXWrapper = document.createElement("div");
-                    rotationXWrapper.style.display = "flex";
-                    rotationXWrapper.style.justifyContent = "space-between";
-                    entityWrapper.appendChild(rotationXWrapper);
+            { // Help
+                const helpDisplay = document.createElement("p");
+                helpDisplay.style.marginTop = "10px";
+                helpDisplay.innerText = "You can rotate the model by clicking and dragging";
 
-                    const rotationXLabel = document.createElement("label");
-                    rotationXLabel.innerText = "Rotation X";
-                    rotationXWrapper.appendChild(rotationXLabel);
+                entityWrapper.appendChild(helpDisplay);
+            }
 
-                    const rotationXInput = document.createElement("input");
-                    rotationXInput.type = "number";
-                    rotationXInput.value = String(this._entity!.rotation[0]);
-                    rotationXInput.step = "0.1";
-                    rotationXWrapper.appendChild(rotationXInput);
+            { // Scroll
+                const canvasElement = this._canvas.getElement();
 
-                    rotationXInput.addEventListener("input", () => {
-                        this._entity!.rotation[0] = Number(rotationXInput.value);
-                    });
-                }
+                canvasElement.addEventListener("pointerdown", (event) => {
+                    canvasElement.style.cursor = "all-scroll";
+                    canvasElement.setPointerCapture(event.pointerId);
 
-                { // Y
-                    const rotationYWrapper = document.createElement("div");
-                    rotationYWrapper.style.display = "flex";
-                    rotationYWrapper.style.justifyContent = "space-between";
-                    entityWrapper.appendChild(rotationYWrapper);
+                    this._dragState = {
+                        ...this._dragState,
+                        isDragging: true,
+                        lastX: event.clientX,
+                        lastY: event.clientY,
+                    };
+                });
+                canvasElement.addEventListener("pointerup", (event) => {
+                    canvasElement.style.cursor = "pointer";
+                    canvasElement.releasePointerCapture(event.pointerId);
 
-                    const rotationYLabel = document.createElement("label");
-                    rotationYLabel.innerText = "Rotation Y";
-                    rotationYWrapper.appendChild(rotationYLabel);
+                    this._dragState.isDragging = false;
+                });
+                canvasElement.addEventListener("pointermove", (event) => {
+                    if (!this._dragState.isDragging) {
+                        return;
+                    }
 
-                    const rotationYInput = document.createElement("input");
-                    rotationYInput.type = "number";
-                    rotationYInput.value = String(this._entity!.rotation[1]);
-                    rotationYInput.step = "0.1";
-                    rotationYWrapper.appendChild(rotationYInput);
+                    const dx = event.clientX - this._dragState.lastX;
+                    const dy = event.clientY - this._dragState.lastY;
+                    this._dragState.lastX = event.clientX;
+                    this._dragState.lastY = event.clientY;
 
-                    rotationYInput.addEventListener("input", () => {
-                        this._entity!.rotation[1] = Number(rotationYInput.value);
-                    });
-                }
-
-                { // Z
-                    const rotationZWrapper = document.createElement("div");
-                    rotationZWrapper.style.display = "flex";
-                    rotationZWrapper.style.justifyContent = "space-between";
-                    entityWrapper.appendChild(rotationZWrapper);
-
-                    const rotationZLabel = document.createElement("label");
-                    rotationZLabel.innerText = "Rotation Z";
-                    rotationZWrapper.appendChild(rotationZLabel);
-
-                    const rotationZInput = document.createElement("input");
-                    rotationZInput.type = "number";
-                    rotationZInput.value = String(this._entity!.rotation[1]);
-                    rotationZInput.step = "0.1";
-                    rotationZWrapper.appendChild(rotationZInput);
-
-                    rotationZInput.addEventListener("input", () => {
-                        this._entity!.rotation[1] = Number(rotationZInput.value);
-                    });
-                }
+                    if (this._entity) {
+                        this._entity.rotation = [
+                            this._entity.rotation[0] + dy * POINTER_SENSITIVITY,
+                            this._entity.rotation[1] - dx * POINTER_SENSITIVITY,
+                            this._entity.rotation[2],
+                        ];
+                    }
+                });
             }
         }
 
@@ -574,6 +565,15 @@ class App {
                     });
                 }
             }
+        }
+
+        { // FPS
+            const fpsDisplay = document.createElement("p");
+            fpsDisplay.innerText = "FPS: 0";
+
+            setInterval(() => fpsDisplay.innerText = `FPS: ${Math.round(1 / this._deltaTime)}`, 1000);
+
+            menuWrapper.appendChild(fpsDisplay);
         }
     }
 }

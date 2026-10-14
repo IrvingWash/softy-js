@@ -52,6 +52,10 @@ export class Canvas {
         this._resizeObserver?.disconnect();
     }
 
+    public getElement(): HTMLCanvasElement {
+        return this._element;
+    }
+
     public getPixelSize(): Vector2 {
         return [this._element.width, this._element.height];
     }
