@@ -3,10 +3,10 @@
 [Demo](https://irvingwash.github.io/softy-js/)
 
 SoftyJS is a port of softy, a software 3D renderer, from Jai to TypeScript.
-The port, as the original project, is written completely by hand.
+The port, as the original project, is written completely by hand. It doesn't have any dependencies and implements a renderer/rasterizer from scratch.
 
 It uses HTML Canvas only as a surface to put pixels into. None of the canvas drawing methods are called.
-All the pixels are rasterized into an array and after copied into the canvas using `putImage`.
+All the pixels are manually rasterized into an array and after copied into the canvas using `putImage`.
 
 Everything, including all the rasterizing and transformation math, is done by hand without LLM assistance.
 
@@ -24,8 +24,11 @@ Currently it can:
 
 ## Architecture
 
+There are four independent libraries:
 - `canvas.ts` - an HTML Canvas wrapper which abtracts the Canvas away, so Renderer depends only on a simple interface
 - `math.ts` - Vector and Matrix math implementation
 - `obj-parser.ts` - A naive OBJ parser
 - `renderer.ts` - Contains all the rendering and rasterization logic
+
+And an example:
 - `index.ts` - The application which calls into the above libraries. Contains a "game loop" and GUI controls
