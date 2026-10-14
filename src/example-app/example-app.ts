@@ -95,7 +95,34 @@ export class ExampleApp {
                     : { direction: SUN_DIRECTION, color };
 
                 this._renderer.setDirectionalLight(toSet);
-            }
+            },
+            (x: number) => {
+                const previous = this._renderer.getDirectionalLight();
+
+                const toSet = previous !== null
+                    ? { ...previous, direction: [x, previous.direction[1], previous.direction[2]] as Vector3 }
+                    : { color: SUN_COLOR, direction: [x, SUN_DIRECTION[1], SUN_DIRECTION[2]] as Vector3 };
+
+                this._renderer.setDirectionalLight(toSet);
+            },
+            (y: number) => {
+                const previous = this._renderer.getDirectionalLight();
+
+                const toSet = previous !== null
+                    ? { ...previous, direction: [previous.direction[0], y, previous.direction[2]] as Vector3 }
+                    : { color: SUN_COLOR, direction: [SUN_DIRECTION[0], y, SUN_DIRECTION[2]] as Vector3 };
+
+                this._renderer.setDirectionalLight(toSet);
+            },
+            (z: number) => {
+                const previous = this._renderer.getDirectionalLight();
+
+                const toSet = previous !== null
+                    ? { ...previous, direction: [previous.direction[0], previous.direction[1], z] as Vector3 }
+                    : { color: SUN_COLOR, direction: [SUN_DIRECTION[0], SUN_DIRECTION[1], z] as Vector3 };
+
+                this._renderer.setDirectionalLight(toSet);
+            },
         );
     }
 

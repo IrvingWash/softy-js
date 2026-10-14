@@ -40,6 +40,9 @@ export class GUI {
         onCullModeSelect: (mode: string) => void,
         onDepthTestToggle: (enabled: boolean) => void,
         onDirectionalLightColorSelect: (color: Vector3) => void,
+        onDirectionalLightXDirectionChange: (x: number) => void,
+        onDirectionalLightYDirectionChange: (y: number) => void,
+        onDirectionalLightZDirectionChange: (z: number) => void,
     ) {
         this._setupDragControls(canvas);
 
@@ -64,7 +67,13 @@ export class GUI {
             "20px 0",
         );
 
-        this._createDirectionalLightSubmenu(onDirectionalLightColorSelect, "0");
+        this._createDirectionalLightSubmenu(
+            onDirectionalLightColorSelect,
+            onDirectionalLightXDirectionChange,
+            onDirectionalLightYDirectionChange,
+            onDirectionalLightZDirectionChange,
+            "0",
+        );
     }
 
     public update(
@@ -114,7 +123,10 @@ export class GUI {
     }
 
     private _createDirectionalLightSubmenu(
-        onDirectionalLightColorSelect: (color: Vector3) => void,
+        onColorSelect: (color: Vector3) => void,
+        onXDirectionChange: (x: number) => void,
+        onYDirectionChange: (y: number) => void,
+        onZDirectionChange: (z: number) => void,
         margin: string,
     ): void {
         const directionalLightWrapper = document.createElement("div");
@@ -134,17 +146,63 @@ export class GUI {
 
         { // Color
             const directionalLightColorLabel = document.createElement("label");
-            directionalLightColorLabel.innerText = "Directional light color";
+            directionalLightColorLabel.innerText = "Color";
             directionalLightWrapper.appendChild(directionalLightColorLabel);
 
             this._directionalLightColorPicker = document.createElement("input");
             this._directionalLightColorPicker.type = "color";
 
             this._directionalLightColorPicker.addEventListener("input", () => {
-                onDirectionalLightColorSelect(cssHexToVector3Color(this._directionalLightColorPicker.value));
+                onColorSelect(cssHexToVector3Color(this._directionalLightColorPicker.value));
             });
 
             directionalLightWrapper.appendChild(this._directionalLightColorPicker);
+        }
+
+        { // X direction
+            const directionalLightXDirectionLabel = document.createElement("label");
+            directionalLightXDirectionLabel.innerText = "X direction";
+            directionalLightWrapper.appendChild(directionalLightXDirectionLabel);
+
+            const directionalLightXDirectionSlider = document.createElement("input");
+            directionalLightXDirectionSlider.type = "range";
+            directionalLightXDirectionSlider.min = "0";
+            directionalLightXDirectionSlider.max = "1";
+            directionalLightXDirectionSlider.step = "0.1";
+            directionalLightXDirectionSlider.addEventListener("input", () => {
+                onXDirectionChange(Number(directionalLightXDirectionSlider.value));
+            });
+            directionalLightWrapper.appendChild(directionalLightXDirectionSlider);
+        }
+        { // Y direction
+            const directionalLightYDirectionLabel = document.createElement("label");
+            directionalLightYDirectionLabel.innerText = "Y direction";
+            directionalLightWrapper.appendChild(directionalLightYDirectionLabel);
+
+            const directionalLightYDirectionSlider = document.createElement("input");
+            directionalLightYDirectionSlider.type = "range";
+            directionalLightYDirectionSlider.min = "0";
+            directionalLightYDirectionSlider.max = "1";
+            directionalLightYDirectionSlider.step = "0.1";
+            directionalLightYDirectionSlider.addEventListener("input", () => {
+                onYDirectionChange(Number(directionalLightYDirectionSlider.value));
+            });
+            directionalLightWrapper.appendChild(directionalLightYDirectionSlider);
+        }
+        { // Z direction
+            const directionalLightZDirectionLabel = document.createElement("label");
+            directionalLightZDirectionLabel.innerText = "Z direction";
+            directionalLightWrapper.appendChild(directionalLightZDirectionLabel);
+
+            const directionalLightZDirectionSlider = document.createElement("input");
+            directionalLightZDirectionSlider.type = "range";
+            directionalLightZDirectionSlider.min = "0";
+            directionalLightZDirectionSlider.max = "1";
+            directionalLightZDirectionSlider.step = "0.1";
+            directionalLightZDirectionSlider.addEventListener("input", () => {
+                onZDirectionChange(Number(directionalLightZDirectionSlider.value));
+            });
+            directionalLightWrapper.appendChild(directionalLightZDirectionSlider);
         }
     }
 
