@@ -16,9 +16,10 @@ import {
     subtractVector3s,
 } from "./math";
 
-export enum PolygonMode {
+export enum RenderMode {
     Filled = "Filled",
     Wireframe = "Wireframe",
+    Textured = "Textured",
 }
 
 export enum CullMode {
@@ -53,6 +54,7 @@ interface FrameBuffer {
 
 interface Face {
     vertexIndices: Vector3;
+    uvIndices: Vector3;
 }
 
 export class Renderer {
@@ -65,7 +67,7 @@ export class Renderer {
 
     private _projectionMatrix: Matrix4 = makeMatrix4Identity();
 
-    private _polygonMode: PolygonMode = PolygonMode.Filled;
+    private _renderMode: RenderMode = RenderMode.Filled;
     private _cullMode: CullMode = CullMode.BackFace;
     private _depthTesting: boolean = true;
 
@@ -118,12 +120,12 @@ export class Renderer {
         return this._clearColor;
     }
 
-    public setPolygonMode(mode: PolygonMode): void {
-        this._polygonMode = mode;
+    public setRenderMode(mode: RenderMode): void {
+        this._renderMode = mode;
     }
 
-    public getPolygonMode(): PolygonMode {
-        return this._polygonMode;
+    public getRenderMode(): RenderMode {
+        return this._renderMode;
     }
 
     public setCullMode(mode: CullMode): void {
@@ -152,9 +154,16 @@ export class Renderer {
         return this._depthTesting;
     }
 
-    public draw(vertices: Vector3[], faces: Face[], modelTransform: Matrix4): void {
+    public draw(
+        vertices: Vector3[],
+        uvs: Vector2[],
+        faces: Face[],
+        texture: ImageData,
+        modelTransform: Matrix4,
+    ): void {
         interface TriangleToRender {
             positions: [Vector4, Vector4, Vector4];
+            uvs: [Vector2, Vector2, Vector2];
             color: Vector3;
         }
 
@@ -206,8 +215,17 @@ export class Renderer {
             const bProjected = projectVectorPerspective(this._projectionMatrix, [bTransformed[0], bTransformed[1], bTransformed[2]]);
             const cProjected = projectVectorPerspective(this._projectionMatrix, [cTransformed[0], cTransformed[1], cTransformed[2]]);
 
+            const aViewported = this._transformToViewportCenter(aProjected);
+            const bViewported = this._transformToViewportCenter(bProjected);
+            const cViewported = this._transformToViewportCenter(cProjected);
+
             trianglesToRender.push({
-                positions: [aProjected, bProjected, cProjected],
+                positions: [aViewported, bViewported, cViewported],
+                uvs: [
+                    uvs[face.uvIndices[0]],
+                    uvs[face.uvIndices[1]],
+                    uvs[face.uvIndices[2]],
+                ],
                 color: faceColor,
             });
         }
@@ -220,25 +238,36 @@ export class Renderer {
         for (const triangleToRender of trianglesToRender) {
             const [a, b, c] = triangleToRender.positions;
 
-            switch (this._polygonMode) {
-                case PolygonMode.Filled:
+            switch (this._renderMode) {
+                case RenderMode.Filled:
                     this._drawFilledTriangle(
-                        this._transformToViewportCenter(a),
-                        this._transformToViewportCenter(b),
-                        this._transformToViewportCenter(c),
+                        [a[0], a[1]],
+                        [b[0], b[1]],
+                        [c[0], c[1]],
                         triangleToRender.color,
                     );
                     break;
-                case PolygonMode.Wireframe:
+                case RenderMode.Wireframe:
                     this._drawTriangle(
-                        this._transformToViewportCenter(a),
-                        this._transformToViewportCenter(b),
-                        this._transformToViewportCenter(c),
+                        [a[0], a[1]],
+                        [b[0], b[1]],
+                        [c[0], c[1]],
                         triangleToRender.color,
+                    );
+                    break;
+                case RenderMode.Textured:
+                    this._drawTexturedTriangle(
+                        a,
+                        b,
+                        c,
+                        triangleToRender.uvs[0],
+                        triangleToRender.uvs[1],
+                        triangleToRender.uvs[2],
+                        texture,
                     );
                     break;
                 default:
-                    exhaustiveCheck(this._polygonMode);
+                    exhaustiveCheck(this._renderMode);
             }
         }
     }
@@ -290,6 +319,18 @@ export class Renderer {
         this._drawLine(vertex1, vertex2, color);
         this._drawLine(vertex2, vertex3, color);
         this._drawLine(vertex3, vertex1, color);
+    }
+
+    private _drawTexturedTriangle(
+        vertex1: Vector4,
+        vertex2: Vector4,
+        vertex3: Vector4,
+        uv1: Vector2,
+        uv2: Vector2,
+        uv3: Vector2,
+        texture: ImageData,
+    ): void {
+        
     }
 
     private _drawFilledTriangle(
@@ -413,12 +454,14 @@ export class Renderer {
         };
     }
 
-    private _transformToViewportCenter(v: Vector4): Vector2 {
+    private _transformToViewportCenter(v: Vector4): Vector4 {
         const [width, height] = this._cachedCanvasSize;
 
         return [
             (v[0] + 1) / 2 * width,
             (1 - v[1]) / 2 * height,
+            v[2],
+            v[3],
         ];
     }
 

@@ -1,5 +1,5 @@
 import { Canvas } from "./canvas";
-import { Camera, CullMode, PolygonMode, Renderer } from "./renderer";
+import { Camera, CullMode, RenderMode, Renderer } from "./renderer";
 import { ObjData, parseObj } from "./obj-parser";
 
 import {
@@ -154,7 +154,9 @@ class App {
         if (this._entity) {
             this._renderer.draw(
                 this._entity.model.objData.vertices,
+                this._entity.model.objData.uvs,
                 this._entity.model.objData.faces,
+                this._entity.model.texture,
                 this._entity.getModelTransform(),
             );
         }
@@ -399,31 +401,31 @@ class App {
                 ]));
             }
 
-            { // Polygon mode
-                const polygonModeWrapper = document.createElement("div");
-                polygonModeWrapper.style.display = "flex";
-                polygonModeWrapper.style.justifyContent = "space-between";
-                polygonModeWrapper.style.margin = menuItemWrapperMargin;
-                rendererWrapper.appendChild(polygonModeWrapper);
+            { // Render mode
+                const renderModeWrapper = document.createElement("div");
+                renderModeWrapper.style.display = "flex";
+                renderModeWrapper.style.justifyContent = "space-between";
+                renderModeWrapper.style.margin = menuItemWrapperMargin;
+                rendererWrapper.appendChild(renderModeWrapper);
 
-                const polygonModeLabel = document.createElement("label");
-                polygonModeLabel.innerText = "Polygon mode"
-                polygonModeWrapper.appendChild(polygonModeLabel);
+                const renderModeLabel = document.createElement("label");
+                renderModeLabel.innerText = "Render mode"
+                renderModeWrapper.appendChild(renderModeLabel);
 
-                const polygonModeDropDown = document.createElement("select");
-                polygonModeWrapper.appendChild(polygonModeDropDown);
+                const renderModeDropDown = document.createElement("select");
+                renderModeWrapper.appendChild(renderModeDropDown);
 
-                for (const variant of Object.values(PolygonMode)) {
+                for (const variant of Object.values(RenderMode)) {
                     const option = document.createElement("option");
                     option.value = variant;
                     option.innerText = variant;
                     
-                    polygonModeDropDown.appendChild(option);
+                    renderModeDropDown.appendChild(option);
                 }
 
-                polygonModeDropDown.value = this._renderer.getPolygonMode();
+                renderModeDropDown.value = this._renderer.getRenderMode();
 
-                polygonModeDropDown.addEventListener("change", () => this._renderer.setPolygonMode(polygonModeDropDown.value as PolygonMode));
+                renderModeDropDown.addEventListener("change", () => this._renderer.setRenderMode(renderModeDropDown.value as RenderMode));
             }
 
             { // Cull mode
