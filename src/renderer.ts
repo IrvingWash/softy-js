@@ -3,6 +3,7 @@ import {
     Vector2,
     Vector3,
     Vector4,
+    calculateBarycentricWeights,
     calculateFaceNormal,
     clamp,
     dotProduct,
@@ -63,7 +64,7 @@ export class Renderer {
 
     private _frameBuffer: FrameBuffer;
     private _clearColor: Vector3 = [0, 0, 0];
-    private _zBuffer: Uint32Array;
+    private _depthBuffer: Uint32Array;
 
     private _projectionMatrix: Matrix4 = makeMatrix4Identity();
 
@@ -85,7 +86,7 @@ export class Renderer {
         this._cachedCanvasSize = this._canvas.getPixelSize();
 
         this._frameBuffer = this._createFrameBuffer();
-        this._zBuffer = this._createZBuffer();
+        this._depthBuffer = this._createDepthBuffer();
 
         this._canvas.subscribeResize(this._onResize);
     }
@@ -96,7 +97,7 @@ export class Renderer {
 
     public startDrawing(camera: Camera): void {
         this._clearFrameBuffer();
-        this._clearZBuffer();
+        this._clearDepthBuffer();
 
         this._projectionMatrix = makePerspectiveProjectionMatrix(
             this._cachedCanvasSize[1] / this._cachedCanvasSize[0],
@@ -272,6 +273,52 @@ export class Renderer {
         }
     }
 
+    private _drawTexel(
+        x: number,
+        y: number,
+        a: Vector4,
+        b: Vector4,
+        c: Vector4,
+        aUv: Vector2,
+        bUv: Vector2,
+        cUv: Vector2,
+        texture: ImageData,
+    ): void {
+        const { alpha, beta, gamma } = calculateBarycentricWeights(
+            [a[0], a[1]],
+            [b[0], b[1]],
+            [c[0], c[1]],
+            [x, y],
+        );
+
+        const interpolatedReciprocalW = 1  / a[3] * alpha + 1  / b[3] * beta + 1  / c[3] * gamma;
+
+        if (interpolatedReciprocalW < this._depthBuffer[y * this._cachedCanvasSize[0] + x]) {
+            return;
+        }
+
+        const interpolatedU = (aUv[0] / a[3] * alpha + bUv[0] / b[3] * beta + cUv[0] / c[3] * gamma) / interpolatedReciprocalW;
+        const interpolatedV = (aUv[1] / a[3] * alpha + bUv[1] / b[3] * beta + cUv[1] / c[3] * gamma) / interpolatedReciprocalW;
+
+        const u = interpolatedU - Math.floor(interpolatedU);
+        const v = interpolatedV - Math.floor(interpolatedV);
+
+        const texelX = Math.min(texture.width - 1, Math.floor(u * texture.width));
+        const texelY = Math.min(texture.height - 1, Math.floor(v * texture.height));
+
+        const index = (texelY * texture.width + texelX) * 4;
+
+        const color: Vector3 = [
+            texture.data[index],
+            texture.data[index + 1],
+            texture.data[index + 2],
+        ];
+
+        this._drawPixel([x, y], color);
+
+        this._depthBuffer[y * this._cachedCanvasSize[0] + x] = interpolatedReciprocalW;
+    }
+
     private _drawPixel(position: Vector2, color: Vector3): void {
         const [width, height] = this._cachedCanvasSize;
 
@@ -330,7 +377,105 @@ export class Renderer {
         uv3: Vector2,
         texture: ImageData,
     ): void {
-        
+        let [x0, y0, z0, w0] = vertex1;
+        let [x1, y1, z1, w1] = vertex2;
+        let [x2, y2, z2, w2] = vertex3;
+        let [u0, v0] = uv1;
+        let [u1, v1] = uv2;
+        let [u2, v2] = uv3;
+
+        if (y0 > y1) {
+            [y0, y1] = [y1, y0];
+            [x0, x1] = [x1, x0];
+            [z0, z1] = [z1, z0];
+            [w0, w1] = [w1, w0];
+            [u0, u1] = [u1, u0];
+            [v0, v1] = [v1, v0];
+        }
+        if (y1 > y2) {
+            [y1, y2] = [y2, y1];
+            [x1, x2] = [x2, x1];
+            [z1, z2] = [z2, z1];
+            [w1, w2] = [w2, w1];
+            [u1, u2] = [u2, u1];
+            [v1, v2] = [v2, v1];
+        }
+        if (y0 > y1) {
+            [y0, y1] = [y1, y0];
+            [x0, x1] = [x1, x0];
+            [z0, z1] = [z1, z0];
+            [w0, w1] = [w1, w0];
+            [u0, u1] = [u1, u0];
+            [v0, v1] = [v1, v0];
+        }
+
+        // Upper half
+        if (y1 - y0 != 0) {
+            let leftInverseSlope = 0;
+            let rightInverseSlope = 0;
+
+            if (y1 - y0 != 0) {
+                leftInverseSlope = (x1 - x0) / Math.abs(y1 - y0);
+            }
+            if (y2 - y0 != 0) {
+                rightInverseSlope = (x2 - x0) / Math.abs(y2 - y0);
+            }
+
+            for (let y = Math.round(y0); y <= Math.round(y1); y++) {
+                let xStart = x1 + (y - y1) * leftInverseSlope;
+                let xEnd = x0 + (y - y0) * rightInverseSlope;
+                if (xEnd < xStart) {
+                    [xStart, xEnd] = [xEnd, xStart];
+                }
+
+                for (let x = Math.round(xStart); x < Math.round(xEnd); x++) {
+                    this._drawTexel(
+                        x, y,
+                        [x0, y0, z0, w0],
+                        [x1, y1, z1, w1],
+                        [x2, y2, z2, w2],
+                        [u0, v0],
+                        [u1, v1],
+                        [u2, v2],
+                        texture,
+                    );
+                }
+            }
+        }
+
+        // Lower half
+        if (y2 - y1 != 0) {
+            let leftInverseSlope = 0;
+            let rightInverseSlope = 0;
+
+            if (y2 - y1 != 0) {
+                leftInverseSlope = (x2 - x1) / Math.abs(y2 - y1);
+            }
+            if (y2 - y0 != 0) {
+                rightInverseSlope = (x2 - x0) / Math.abs(y2 - y0);
+            }
+
+            for (let y = Math.round(y1); y <= Math.round(y2); y++) {
+                let xStart = x1 + (y - y1) * leftInverseSlope;
+                let xEnd = x0 + (y - y0) * rightInverseSlope;
+                if (xEnd < xStart) {
+                    [xStart, xEnd] = [xEnd, xStart];
+                }
+
+                for (let x = Math.round(xStart); x < Math.round(xEnd); x++) {
+                    this._drawTexel(
+                        x, y,
+                        [x0, y0, z0, w0],
+                        [x1, y1, z1, w1],
+                        [x2, y2, z2, w2],
+                        [u0, v0],
+                        [u1, v1],
+                        [u2, v2],
+                        texture,
+                    );
+                }
+            }
+        }
     }
 
     private _drawFilledTriangle(
@@ -390,8 +535,8 @@ export class Renderer {
             return;
         }
 
-        const inverseSlope1 = (x1 - x0) / (y1 - y0);
-        const inverseSlope2 = (x2 - x0) / (y2 - y0);
+        const inverseSlopeLeft = (x1 - x0) / (y1 - y0);
+        const inverseSlopeRight = (x2 - x0) / (y2 - y0);
 
         let startX = x0;
         let endX = x0;
@@ -399,8 +544,8 @@ export class Renderer {
         for (let y = y0; y <= y2; y++) {
             this._drawLine([startX, y], [endX, y], color);
 
-            startX += inverseSlope1;
-            endX += inverseSlope2;
+            startX += inverseSlopeLeft;
+            endX += inverseSlopeRight;
         }
     }
 
@@ -414,8 +559,8 @@ export class Renderer {
             return;
         }
 
-        const inverseSlope1 = (x2 - x0) / (y2 - y0);
-        const inverseSlope2 = (x2 - x1) / (y2 - y1);
+        const inverseSlopeLeft = (x2 - x0) / (y2 - y0);
+        const inverseSlopeRight = (x2 - x1) / (y2 - y1);
 
         let startX = x2;
         let endX = x2;
@@ -423,16 +568,16 @@ export class Renderer {
         for (let y = y2; y >= y0; y--) {
             this._drawLine([startX, y], [endX, y], color);
 
-            startX -= inverseSlope1;
-            endX -= inverseSlope2;
+            startX -= inverseSlopeLeft;
+            endX -= inverseSlopeRight;
         }
     }
 
-    private _clearZBuffer(): void {
-        this._zBuffer.fill(0);
+    private _clearDepthBuffer(): void {
+        this._depthBuffer.fill(0);
     }
 
-    private _createZBuffer(): Uint32Array {
+    private _createDepthBuffer(): Uint32Array {
         const [width, height] = this._cachedCanvasSize;
 
         return new Uint32Array(width * height);
@@ -469,7 +614,7 @@ export class Renderer {
         this._cachedCanvasSize = this._canvas.getPixelSize();
 
         this._frameBuffer = this._createFrameBuffer();
-        this._zBuffer = this._createZBuffer();
+        this._depthBuffer = this._createDepthBuffer();
     };
 }
 

@@ -21,6 +21,9 @@ Currently it can:
 - Render flat shaded 3D meshes
 - Backface culling
 - Simple directional light
+- Texture rasterization using barycentric weights
+- Depth testing for textured triangles
+- Painter's algorithm for flat-shaded triangles
 
 ## Architecture
 
