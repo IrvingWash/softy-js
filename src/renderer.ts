@@ -131,8 +131,8 @@ export class Renderer {
     }
 
     public finishDrawing(): void {
-        // For textured we use the depth buffer, for other modes - painters algo.
-        if (this._depthTesting && this._renderMode != RenderMode.Textured) {
+        // For Textured/Filled we use the depth buffer. For wireframe - the painters algo.
+        if (this._depthTesting && this._renderMode === RenderMode.Wireframe) {
             this._trianglesToRender.sort((a, b) => b.positions[0][3] - a.positions[0][3]);
         }
 
@@ -328,6 +328,14 @@ export class Renderer {
         texture: ImageData,
         tint: Vector3,
     ): void {
+        const [width, height] = this._cachedCanvasSize;
+        if (
+            x >= width || x < 0
+            || y >= height || y < 0
+        ) {
+            return;
+        }
+
         const { alpha, beta, gamma } = calculateBarycentricWeights(
             [a[0], a[1]],
             [b[0], b[1]],
@@ -373,6 +381,40 @@ export class Renderer {
         }
     }
 
+    private _drawFlatShadedPixel(
+        x: number, y: number,
+        a: Vector4, b: Vector4, c: Vector4,
+        color: Vector3,
+    ): void {
+        const [width, height] = this._cachedCanvasSize;
+        if (
+            x >= width || x < 0
+            || y >= height || y < 0
+        ) {
+            return;
+        }
+
+        if (this._depthTesting) {
+            const { alpha, beta, gamma } = calculateBarycentricWeights(
+                [a[0], a[1]],
+                [b[0], b[1]],
+                [c[0], c[1]],
+                [x, y],
+            );
+
+            const reciprocalW = alpha / a[3] + beta / b[3] + gamma / c[3];
+
+            const index = y * width + x;
+            if (reciprocalW < this._depthBuffer[index]) {
+                return;
+            }
+
+            this._depthBuffer[index] = reciprocalW;
+        }
+
+        this._drawPixel([x, y], color);
+    }
+
     private _drawPixel(position: Vector2, color: Vector3): void {
         const [width, height] = this._cachedCanvasSize;
 
@@ -403,7 +445,15 @@ export class Renderer {
         let currentX = startX;
         let currentY = startY;
 
+        const [width, height] = this._cachedCanvasSize;
         for (let i = 0; i <= longestSideLength; i++) {
+            if (
+                currentX >= width || currentX < 0
+                || currentY >= height || currentY < 0
+            ) {
+                continue;
+            }
+
             this._drawPixel([Math.round(currentX), Math.round(currentY)], color);
 
             currentX += xStep;
@@ -565,13 +615,13 @@ export class Renderer {
 
         // The triangle is already flat-bottom
         if (y1 === y2) {
-            this._drawFlatBottomTriangle(x0, y0, x1, y1, x2, y2, color);
+            this._drawFlatBottomTriangle(x0, y0, x1, y1, x2, y2, vertex1, vertex2, vertex3, color);
             return;
         }
 
         // The triangle is already flat-top
         if (y0 === y1) {
-            this._drawFlatTopTriangle(x0, y0, x1, y1, x2, y2, color);
+            this._drawFlatTopTriangle(x0, y0, x1, y1, x2, y2, vertex1, vertex2, vertex3, color);
             return;
         }
 
@@ -579,15 +629,18 @@ export class Renderer {
         const My = y1;
         const Mx = (x2 - x0) * (y1 - y0) / (y2 - y0) + x0;
 
-        this._drawFlatBottomTriangle(x0, y0, x1, y1, Mx, My, color);
+        this._drawFlatBottomTriangle(x0, y0, x1, y1, Mx, My, vertex1, vertex2, vertex3, color);
 
-        this._drawFlatTopTriangle(x1, y1, Mx, My, x2, y2, color);
+        this._drawFlatTopTriangle(x1, y1, Mx, My, x2, y2, vertex1, vertex2, vertex3, color);
     }
 
     private _drawFlatBottomTriangle(
         x0: number, y0: number,
         x1: number, y1: number,
         x2: number, y2: number,
+        a: Vector4,
+        b: Vector4,
+        c: Vector4,
         color: Vector3,
     ): void {
         if (y1 - y0 === 0 || y2 - y0 === 0) {
@@ -606,7 +659,7 @@ export class Renderer {
             }
 
             for (let x = Math.round(startX); x <= Math.round(endX); x++) {
-                this._drawPixel([x, y], color);
+                this._drawFlatShadedPixel(x, y, a, b, c, color);
             }
         }
     }
@@ -615,6 +668,9 @@ export class Renderer {
         x0: number, y0: number,
         x1: number, y1: number,
         x2: number, y2: number,
+        a: Vector4,
+        b: Vector4,
+        c: Vector4,
         color: Vector3,
     ): void {
         if (y2 - y0 === 0 || y2 - y1 === 0) {
@@ -633,7 +689,7 @@ export class Renderer {
             }
 
             for (let x = Math.round(startX); x <= Math.round(endX); x++) {
-                this._drawPixel([x, y], color);
+                this._drawFlatShadedPixel(x, y, a, b, c, color);
             }
         }
     }
