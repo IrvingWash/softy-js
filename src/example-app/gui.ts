@@ -24,6 +24,8 @@ export class GUI {
     private _loadingDisplay: HTMLParagraphElement | null = null;
     private _tintPicker!: HTMLInputElement;
     private _clearColorPicker!: HTMLInputElement;
+    private _depthTestCheckbox!: HTMLInputElement;
+    private _directionalLightColorPicker!: HTMLInputElement;
 
     public constructor(
         canvas: Canvas,
@@ -34,6 +36,10 @@ export class GUI {
         onClearColorSelect: (color: Vector3) => void,
         availableRenderModes: string[],
         onRenderModeSelect: (mode: string) => void,
+        availableCullModes: string[],
+        onCullModeSelect: (mode: string) => void,
+        onDepthTestToggle: (enabled: boolean) => void,
+        onDirectionalLightColorSelect: (color: Vector3) => void,
     ) {
         this._setupDragControls(canvas);
 
@@ -48,12 +54,29 @@ export class GUI {
             "20px 0",
         );
 
-        this._createRendererSubmenu(onClearColorSelect, availableRenderModes, onRenderModeSelect, "0");
+        this._createRendererSubmenu(
+            onClearColorSelect,
+            availableRenderModes,
+            onRenderModeSelect,
+            availableCullModes,
+            onCullModeSelect,
+            onDepthTestToggle,
+            "20px 0",
+        );
+
+        this._createDirectionalLightSubmenu(onDirectionalLightColorSelect, "0");
     }
 
-    public update(tint: Vector3, clearColor: Vector3): void {
+    public update(
+        tint: Vector3,
+        clearColor: Vector3,
+        depthTesting: boolean,
+        directionalLightColor: Vector3,
+    ): void {
         this._tintPicker.value = vector3ColorToCssHex(tint);
         this._clearColorPicker.value = vector3ColorToCssHex(clearColor);
+        this._depthTestCheckbox.checked = depthTesting;
+        this._directionalLightColorPicker.value = vector3ColorToCssHex(directionalLightColor);
     }
 
     public consumeDragState(): DragState {
@@ -88,6 +111,41 @@ export class GUI {
         }
 
         document.body.removeChild(this._loadingDisplay);
+    }
+
+    private _createDirectionalLightSubmenu(
+        onDirectionalLightColorSelect: (color: Vector3) => void,
+        margin: string,
+    ): void {
+        const directionalLightWrapper = document.createElement("div");
+        directionalLightWrapper.style.display = "flex";
+        directionalLightWrapper.style.flexDirection = "column";
+        directionalLightWrapper.style.justifyContent = "space-between";
+        directionalLightWrapper.style.margin = margin;
+
+        this._menuWrapper.appendChild(directionalLightWrapper);
+
+        { // Title
+            const directionalLightTitle = document.createElement("h3");
+            directionalLightTitle.innerText = "Directional light";
+            directionalLightTitle.style.marginBottom = "5px";
+            directionalLightWrapper.appendChild(directionalLightTitle);
+        }
+
+        { // Color
+            const directionalLightColorLabel = document.createElement("label");
+            directionalLightColorLabel.innerText = "Directional light color";
+            directionalLightWrapper.appendChild(directionalLightColorLabel);
+
+            this._directionalLightColorPicker = document.createElement("input");
+            this._directionalLightColorPicker.type = "color";
+
+            this._directionalLightColorPicker.addEventListener("input", () => {
+                onDirectionalLightColorSelect(cssHexToVector3Color(this._directionalLightColorPicker.value));
+            });
+
+            directionalLightWrapper.appendChild(this._directionalLightColorPicker);
+        }
     }
 
     private _createEntitySubmenu(
@@ -250,6 +308,9 @@ export class GUI {
         onClearColorSelect: (color: Vector3) => void,
         availableRenderModes: string[],
         onRenderModeSelect: (mode: string) => void,
+        availableCullModes: string[],
+        onCullModeSelect: (mode: string) => void,
+        onDepthTestToggle: (enabled: boolean) => void,
         margin: string,
     ): void {
         const rendererWrapper = document.createElement("div");
@@ -305,89 +366,54 @@ export class GUI {
 
             rendererWrapper.appendChild(renderModeDropdown);
         }
+
+        { // Cull mode
+            const cullModeLabel = document.createElement("label");
+            cullModeLabel.innerText = "Cull mode";
+            rendererWrapper.appendChild(cullModeLabel);
+
+            const cullModeDropdown = document.createElement("select");
+            cullModeDropdown.style.marginBottom = "5px";
+
+            for (const cullMode of availableCullModes) {
+                const option = document.createElement("option");
+                option.value = cullMode;
+                option.innerText = cullMode;
+
+                cullModeDropdown.appendChild(option);
+            }
+
+            cullModeDropdown.addEventListener("change", () => {
+                onCullModeSelect(cullModeDropdown.value);
+            });
+
+            rendererWrapper.appendChild(cullModeDropdown);
+        }
+
+        { // Depth testing
+            const depthTestWrapper = document.createElement("div");
+            depthTestWrapper.style.display = "flex";
+            depthTestWrapper.style.justifyContent = "space-between";
+            rendererWrapper.appendChild(depthTestWrapper);
+
+            const depthTestLabel = document.createElement("label");
+            depthTestLabel.innerText = "Depth testing";
+            depthTestWrapper.appendChild(depthTestLabel);
+
+            this._depthTestCheckbox = document.createElement("input");
+            this._depthTestCheckbox.type = "checkbox";
+            this._depthTestCheckbox.style.margin = "0 auto";
+
+            this._depthTestCheckbox.addEventListener("change", () => {
+                onDepthTestToggle(this._depthTestCheckbox.checked);
+            });
+
+            depthTestWrapper.appendChild(this._depthTestCheckbox);
+        }
     }
 
     // private _createGui() { // This is a dumpster...
     //     { // Renderer
-    //         { // Render mode
-    //             const renderModeWrapper = document.createElement("div");
-    //             renderModeWrapper.style.display = "flex";
-    //             renderModeWrapper.style.justifyContent = "space-between";
-    //             renderModeWrapper.style.margin = menuItemWrapperMargin;
-    //             rendererWrapper.appendChild(renderModeWrapper);
-    //
-    //             const renderModeLabel = document.createElement("label");
-    //             renderModeLabel.innerText = "Render mode"
-    //             renderModeWrapper.appendChild(renderModeLabel);
-    //
-    //             const renderModeDropDown = document.createElement("select");
-    //             renderModeWrapper.appendChild(renderModeDropDown);
-    //
-    //             for (const variant of Object.values(RenderMode)) {
-    //                 const option = document.createElement("option");
-    //                 option.value = variant;
-    //                 option.innerText = variant;
-    //
-    //                 renderModeDropDown.appendChild(option);
-    //             }
-    //
-    //             renderModeDropDown.value = this._renderer.getRenderMode();
-    //
-    //             renderModeDropDown.addEventListener("change", () => this._renderer.setRenderMode(renderModeDropDown.value as RenderMode));
-    //         }
-    //
-    //         { // Cull mode
-    //             const cullModeWrapper = document.createElement("div");
-    //             cullModeWrapper.style.display = "flex";
-    //             cullModeWrapper.style.justifyContent = "space-between";
-    //             cullModeWrapper.style.margin = menuItemWrapperMargin;
-    //             rendererWrapper.appendChild(cullModeWrapper);
-    //
-    //             const cullModeLabel = document.createElement("label");
-    //             cullModeLabel.innerText = "Cull mode"
-    //             cullModeWrapper.appendChild(cullModeLabel);
-    //
-    //             const cullModeDropDown = document.createElement("select");
-    //             cullModeWrapper.appendChild(cullModeDropDown);
-    //
-    //             for (const variant of Object.values(CullMode)) {
-    //                 const option = document.createElement("option");
-    //                 option.value = variant;
-    //                 option.innerText = variant;
-    //
-    //                 cullModeDropDown.appendChild(option);
-    //             }
-    //
-    //             cullModeDropDown.value = this._renderer.getCullMode();
-    //
-    //             cullModeDropDown.addEventListener("change", () => this._renderer.setCullMode(cullModeDropDown.value as CullMode));
-    //         }
-    //
-    //         { // Depth testing
-    //             const depthTestingWrapper = document.createElement("div");
-    //             depthTestingWrapper.style.display = "flex";
-    //             depthTestingWrapper.style.justifyContent = "space-between";
-    //             depthTestingWrapper.style.margin = menuItemWrapperMargin;
-    //             rendererWrapper.appendChild(depthTestingWrapper);
-    //
-    //             const cullModeLabel = document.createElement("label");
-    //             cullModeLabel.innerText = "Depth testing"
-    //             depthTestingWrapper.appendChild(cullModeLabel);
-    //
-    //             const depthTestingCheckbox = document.createElement("input");
-    //             depthTestingCheckbox.type = "checkbox";
-    //             depthTestingWrapper.appendChild(depthTestingCheckbox);
-    //
-    //             depthTestingCheckbox.checked = this._renderer.getDepthTesting();
-    //
-    //             depthTestingCheckbox.addEventListener(
-    //                 "change",
-    //                 () => {
-    //                     this._renderer.setDepthTesting(depthTestingCheckbox.checked)
-    //                 }
-    //             );
-    //         }
-    //
     //         { // Directional Light
     //             const directionalLightWrapper = document.createElement("div");
     //             directionalLightWrapper.style.display = "flex";

@@ -35,7 +35,7 @@ There are four independent libraries:
 - `renderer.ts` - Contains all the rendering and rasterization logic
 
 And an example:
-- `index.ts` - The application which calls into the above libraries. Contains a "game loop" and GUI controls
+- `example-app/` - The application which calls into the above libraries. Contains a "game loop" and GUI controls
 
 ## What's not ported from the origina project
 - Clipping

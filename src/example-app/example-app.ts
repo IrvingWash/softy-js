@@ -32,8 +32,8 @@ interface Model {
 
 const SECONDS_IN_MILLISECOND = 1 / 1000;
 const CLEAR_COLOR: Vector3 = [135, 206, 235];
-const SUN_COLOR: Vector3 = [255, 255, 255];
-const SUN_DIRECTION: Vector3 = [0, 0, 1];
+const SUN_COLOR: Vector3 = [255, 235, 235];
+const SUN_DIRECTION: Vector3 = [0, 1, 1];
 const MAX_CAMERA_PITCH = degreesToRadians(90 - 0.1);
 const CAMERA_SENSITIVITY = 0.005;
 
@@ -82,8 +82,20 @@ export class ExampleApp {
             this._createEntity,
             (tint: Vector3) => { this._entities[0].tint = tint },
             (color: Vector3) => { this._renderer.setClearColor(color) },
-            Object.keys(RenderMode),
+            Object.values(RenderMode),
             (mode: string) => { this._renderer.setRenderMode(mode as RenderMode) },
+            Object.values(CullMode),
+            (mode: string) => { this._renderer.setCullMode(mode as CullMode) },
+            (enabled: boolean) => { this._renderer.setDepthTesting(enabled) },
+            (color: Vector3) => {
+                const previous = this._renderer.getDirectionalLight();
+
+                const toSet = previous !== null
+                    ? { ...previous, color: color }
+                    : { direction: SUN_DIRECTION, color };
+
+                this._renderer.setDirectionalLight(toSet);
+            }
         );
     }
 
@@ -131,7 +143,12 @@ export class ExampleApp {
     }
 
     private _update(): void {
-        this._gui.update(this._entities[0].tint, this._renderer.getClearColor());
+        this._gui.update(
+            this._entities[0].tint,
+            this._renderer.getClearColor(),
+            this._renderer.getDepthTesting(),
+            this._renderer.getDirectionalLight()?.color ?? [255, 255, 255],
+        );
 
         this._camera.update(this._gui.consumeDragState().delta);
 
