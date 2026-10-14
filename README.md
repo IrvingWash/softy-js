@@ -24,6 +24,7 @@ Currently it can:
 - Texture rasterization using barycentric weights
 - Depth testing for textured triangles
 - Painter's algorithm for flat-shaded triangles
+- Abstracted view/model/projection matrix support
 
 ## Architecture
 
