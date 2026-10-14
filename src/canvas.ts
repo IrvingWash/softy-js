@@ -56,12 +56,16 @@ export class Canvas {
         return [this._element.width, this._element.height];
     }
 
-    public getContext(): CanvasRenderingContext2D {
-        return this._context;
-    }
-
     public subscribeResize(listener: () => void): void {
         this._resizeListeners.add(listener);
+    }
+
+    public createImageData(width: number, height: number): ImageData {
+        return this._context.createImageData(width, height);
+    }
+
+    public putImageData(image: ImageData, dx: number = 0, dy: number = 0): void {
+        this._context.putImageData(image, dx, dy);
     }
 
     public unsubscribeResize(listener: () => void): void {

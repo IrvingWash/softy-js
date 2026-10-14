@@ -21,3 +21,11 @@ Currently it can:
 - Render flat shaded 3D meshes
 - Backface culling
 - Simple directional light
+
+## Architecture
+
+- `canvas.ts` - an HTML Canvas wrapper which abtracts the Canvas away, so Renderer depends only on a simple interface
+- `math.ts` - Vector and Matrix math implementation
+- `obj-parser.ts` - A naive OBJ parser
+- `renderer.ts` - Contains all the rendering and rasterization logic
+- `index.ts` - The application which calls into the above libraries. Contains a "game loop" and GUI controls

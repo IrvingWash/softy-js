@@ -39,8 +39,9 @@ export interface Camera {
 }
 
 interface ICanvas {
+    putImageData(image: ImageData, dx: number, dy: number): void;
+    createImageData(width: number, height: number): ImageData;
     getPixelSize(): Vector2;
-    getContext(): CanvasRenderingContext2D;
     subscribeResize(listener: () => void): void;
     unsubscribeResize(listener: () => void): void;
 }
@@ -106,9 +107,7 @@ export class Renderer {
     }
 
     public finishDrawing(): void {
-        const ctx = this._canvas.getContext();
-
-        ctx.putImageData(this._frameBuffer.image, 0, 0);
+        this._canvas.putImageData(this._frameBuffer.image, 0, 0);
     }
 
     public setClearColor(color: Vector3) {
@@ -403,11 +402,9 @@ export class Renderer {
     }
 
     private _createFrameBuffer(): FrameBuffer {
-        const ctx = this._canvas.getContext();
-
         const [width, height] = this._cachedCanvasSize;
 
-        const image = ctx.createImageData(width, height);
+        const image = this._canvas.createImageData(width, height);
         const colorBuffer = new Uint32Array(image.data.buffer);
 
         return {
