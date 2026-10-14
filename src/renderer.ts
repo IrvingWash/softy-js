@@ -68,7 +68,7 @@ interface Face {
 interface TriangleToRender {
     positions: [Vector4, Vector4, Vector4];
     uvs: [Vector2, Vector2, Vector2];
-    tint: Vector3;
+    color: Vector3;
     normal: Vector3;
     texture: ImageData | null;
 }
@@ -143,7 +143,7 @@ export class Renderer {
                 case RenderMode.Filled:
                     this._drawFilledTriangle(
                         a, b, c,
-                        triangleToRender.tint,
+                        triangleToRender.color,
                     );
                     break;
                 case RenderMode.Wireframe:
@@ -151,7 +151,7 @@ export class Renderer {
                         [a[0], a[1]],
                         [b[0], b[1]],
                         [c[0], c[1]],
-                        triangleToRender.tint,
+                        triangleToRender.color,
                     );
                     break;
                 case RenderMode.Textured:
@@ -164,7 +164,7 @@ export class Renderer {
                         triangleToRender.uvs[2] ?? [0, 0],
                         triangleToRender.normal,
                         triangleToRender.texture ?? this._fallbackTexture,
-                        triangleToRender.tint,
+                        triangleToRender.color,
                     );
                     break;
                 case RenderMode.ModelBased:
@@ -178,12 +178,12 @@ export class Renderer {
                             triangleToRender.uvs[2],
                             triangleToRender.normal,
                             triangleToRender.texture,
-                            triangleToRender.tint,
+                            triangleToRender.color,
                         );
                     } else {
                         this._drawFilledTriangle(
                             a, b, c,
-                            triangleToRender.tint,
+                            triangleToRender.color,
                         );
                     }
                     break;
@@ -282,15 +282,19 @@ export class Renderer {
                     exhaustiveCheck(this._cullMode);
             }
 
-            let faceTint: Vector3 = face.colorIndex !== null ? colors[face.colorIndex] : tint; // @Todo: change behavior
+            let faceColor: Vector3 = face.colorIndex === null
+                ? tint
+                : divideVector3(multiplyVector3s(colors[face.colorIndex], tint), 255);
+
             if (
                 this._directionalLight
-                && this._renderMode != RenderMode.Wireframe
-                && this._renderMode != RenderMode.Textured
-                && (this._renderMode === RenderMode.Filled || texture === null)
-            ) { // We'll do this in drawTexel if it's textured
+                && (
+                    this._renderMode === RenderMode.Filled
+                    || (this._renderMode === RenderMode.ModelBased && texture === null)
+                )
+            ) { // We'll do this in drawTexel if it's textured. @Todo: Maybe move this inside drawFlatShadedPixel, so we have per fragment shading
                 const alignment = -dotProduct(faceNormal, this._directionalLight.normalizedDirection);
-                faceTint = calculateShadedColor(faceTint, this._directionalLight.color, alignment);
+                faceColor = calculateShadedColor(faceColor, this._directionalLight.color, alignment);
             }
 
             const aProjected = projectVectorPerspective(this._projectionMatrix, [aTransformed[0], aTransformed[1], aTransformed[2]]);
@@ -308,7 +312,7 @@ export class Renderer {
                     uvs[face.uvIndices[1]],
                     uvs[face.uvIndices[2]],
                 ],
-                tint: faceTint,
+                color: faceColor,
                 normal: faceNormal,
                 texture,
             });
