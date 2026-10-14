@@ -166,6 +166,7 @@ export class Renderer {
             positions: [Vector4, Vector4, Vector4];
             uvs: [Vector2, Vector2, Vector2];
             color: Vector3;
+            normal: Vector3;
         }
 
         const trianglesToRender: TriangleToRender[] = [];
@@ -206,7 +207,7 @@ export class Renderer {
             }
 
             let faceColor: Vector3 = [255, 255, 255];
-            if (this._directionalLight) {
+            if (this._directionalLight && this._renderMode == RenderMode.Filled) { // We'll do this in drawTexel if it's textured
                 const alignment = -dotProduct(faceNormal, this._directionalLight.direction);
 
                 faceColor = calculateShadedColor(faceColor, this._directionalLight.color, alignment);
@@ -228,6 +229,7 @@ export class Renderer {
                     uvs[face.uvIndices[2]],
                 ],
                 color: faceColor,
+                normal: faceNormal,
             });
         }
 
@@ -264,6 +266,7 @@ export class Renderer {
                         triangleToRender.uvs[0],
                         triangleToRender.uvs[1],
                         triangleToRender.uvs[2],
+                        triangleToRender.normal,
                         texture,
                     );
                     break;
@@ -282,6 +285,7 @@ export class Renderer {
         aUv: Vector2,
         bUv: Vector2,
         cUv: Vector2,
+        normal: Vector3,
         texture: ImageData,
     ): void {
         const { alpha, beta, gamma } = calculateBarycentricWeights(
@@ -308,11 +312,16 @@ export class Renderer {
 
         const index = (texelY * texture.width + texelX) * 4;
 
-        const color: Vector3 = [
+        let color: Vector3 = [
             texture.data[index],
             texture.data[index + 1],
             texture.data[index + 2],
         ];
+
+        if (this._directionalLight) {
+            const alignment = -dotProduct(normal, this._directionalLight.direction);
+            color = calculateShadedColor(color, this._directionalLight.color, alignment);
+        }
 
         this._drawPixel([x, y], color);
 
@@ -377,6 +386,7 @@ export class Renderer {
         uv1: Vector2,
         uv2: Vector2,
         uv3: Vector2,
+        normal: Vector3,
         texture: ImageData,
     ): void {
         let [x0, y0, z0, w0] = vertex1;
@@ -439,6 +449,7 @@ export class Renderer {
                         [u0, v0],
                         [u1, v1],
                         [u2, v2],
+                        normal,
                         texture,
                     );
                 }
@@ -473,6 +484,7 @@ export class Renderer {
                         [u0, v0],
                         [u1, v1],
                         [u2, v2],
+                        normal,
                         texture,
                     );
                 }
@@ -632,6 +644,15 @@ function exhaustiveCheck(value: never): never {
 }
 
 function calculateShadedColor(originalColor: Vector3, lightColor: Vector3, factor: number): Vector3 {
+    if (
+        lightColor[0] == 255
+        && lightColor[1] == 255
+        && lightColor[2] == 255
+        && factor > 0.99
+    ) {
+        return originalColor;
+    }
+
     factor = clamp(factor, 0, 1);
 
     const result: Vector3 = scaleVector3(multiplyVector3s(originalColor, lightColor), factor / 255);

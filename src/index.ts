@@ -62,13 +62,11 @@ interface ModelMetadata {
     texturePath: string;
     scale: Vector3;
     rotation: Vector3;
-    cullBackfaces: boolean;
 }
 
 interface Model {
     objData: ObjData;
     texture: ImageData;
-    cullBackfaces: boolean;
 }
 
 const MODEL_CATALOG: Record<string, ModelMetadata> = {
@@ -77,14 +75,12 @@ const MODEL_CATALOG: Record<string, ModelMetadata> = {
         texturePath: "assets/models/viking-room.png",
         scale: [0.1, 0.1, 0.1] as Vector3,
         rotation: [0.4, -3.2, 0] as Vector3,
-        cullBackfaces: false,
     },
     f22: {
         path: "assets/models/f22.obj",
         texturePath: "assets/models/f22.png",
         scale: [1, 1, 1] as Vector3,
         rotation: [-0.6, 0, 0] as Vector3,
-        cullBackfaces: false,
     },
 } as const;
 
@@ -161,8 +157,6 @@ class App {
         this._renderer.startDrawing(this._camera);
 
         if (this._entity) {
-            this._renderer.setCullMode(this._entity.model.cullBackfaces ? CullMode.BackFace : CullMode.None);
-
             this._renderer.draw(
                 this._entity.model.objData.vertices,
                 this._entity.model.objData.uvs,
@@ -218,7 +212,6 @@ class App {
         return {
             objData,
             texture: image,
-            cullBackfaces: metadata.cullBackfaces,
         }
     }
 
