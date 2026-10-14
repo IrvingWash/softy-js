@@ -7,9 +7,11 @@ import {
     calculateFaceNormal,
     clamp,
     dotProduct,
+    makeLookAtMatrix,
     makeMatrix4Identity,
     makePerspectiveProjectionMatrix,
     multiplyMatrix4AndVector3,
+    multiplyMatrix4s,
     multiplyVector3s,
     normalize,
     projectVectorPerspective,
@@ -33,8 +35,9 @@ export interface DirectionalLight {
     color: Vector3;
 }
 
-export interface Camera {
+interface Camera {
     position: Vector3;
+    target: Vector3;
     fov: number;
     zNear: number;
     zFar: number;
@@ -67,19 +70,13 @@ export class Renderer {
     private _depthBuffer: Float32Array;
 
     private _projectionMatrix: Matrix4 = makeMatrix4Identity();
+    private _viewMatrix: Matrix4 = makeMatrix4Identity();
 
     private _renderMode: RenderMode = RenderMode.Textured;
     private _cullMode: CullMode = CullMode.BackFace;
     private _depthTesting: boolean = true;
 
     private _directionalLight: DirectionalLight | null = null;
-
-    private _camera: Camera = {
-        position: [0, 0, 0],
-        fov: 1.047198, // 60 degrees
-        zNear: 0.1,
-        zFar: 100,
-    };
 
     public constructor(canvas: ICanvas) {
         this._canvas = canvas;
@@ -105,8 +102,11 @@ export class Renderer {
             camera.zNear,
             camera.zFar,
         );
-
-        this._camera = camera;
+        this._viewMatrix = makeLookAtMatrix(
+            camera.position,
+            camera.target,
+            [0, 1, 0],
+        );
     }
 
     public finishDrawing(): void {
@@ -171,14 +171,16 @@ export class Renderer {
 
         const trianglesToRender: TriangleToRender[] = [];
 
+        const viewModel = multiplyMatrix4s(this._viewMatrix, modelTransform);
+
         for (const face of faces) {
             const a = vertices[face.vertexIndices[0]];
             const b = vertices[face.vertexIndices[1]];
             const c = vertices[face.vertexIndices[2]];
 
-            const aTransformed = multiplyMatrix4AndVector3(modelTransform, a);
-            const bTransformed = multiplyMatrix4AndVector3(modelTransform, b);
-            const cTransformed = multiplyMatrix4AndVector3(modelTransform, c);
+            const aTransformed = multiplyMatrix4AndVector3(viewModel, a);
+            const bTransformed = multiplyMatrix4AndVector3(viewModel, b);
+            const cTransformed = multiplyMatrix4AndVector3(viewModel, c);
 
             const faceNormal = calculateFaceNormal(
                 [aTransformed[0], aTransformed[1], aTransformed[2]],
@@ -189,8 +191,8 @@ export class Renderer {
             switch (this._cullMode) {
                 case CullMode.BackFace:
                     const originRay = subtractVector3s(
-                        this._camera.position,
-                        [aTransformed[0], aTransformed[1], aTransformed[2]],
+                        [0, 0, 0],
+                        [aTransformed[0], aTransformed[1], aTransformed[2]]
                     );
                     const alignment = dotProduct(faceNormal, originRay);
 

@@ -1,5 +1,5 @@
 import { Canvas } from "./canvas";
-import { Camera, CullMode, RenderMode, Renderer } from "./renderer";
+import { CullMode, RenderMode, Renderer } from "./renderer";
 import { ObjData, parseObj, UVFlip } from "./obj-parser";
 
 import {
@@ -11,6 +11,7 @@ import {
     makeRotationAroundXMatrix,
     makeRotationAroundYMatrix,
     makeRotationAroundZMatrix,
+    degreesToRadians,
 } from "./math";
 
 const SECONDS_IN_MILLISECOND = 1 / 1000;
@@ -57,6 +58,19 @@ const CLEAR_COLOR: Vector3 = [135, 206, 235];
 const SUN_COLOR: Vector3 = [255, 255, 255];
 const SUN_DIRECTION: Vector3 = [0, 0, 1];
 
+interface Camera {
+    position: Vector3;
+    yaw: number,
+    pitch: number,
+
+    target: Vector3;
+    distance: number;
+
+    fov: number;
+    zNear: number;
+    zFar: number;
+}
+
 interface ModelMetadata {
     path: string;
     texturePath: string;
@@ -85,6 +99,7 @@ const MODEL_CATALOG: Record<string, ModelMetadata> = {
 } as const;
 
 const POINTER_SENSITIVITY = 0.005;
+const MAX_CAMERA_PITCH = degreesToRadians(90 - 0.1);
 
 class App {
     private readonly _canvas: Canvas;
@@ -101,8 +116,6 @@ class App {
 
     private _dragState = {
         isDragging: false,
-        yaw: 0,
-        pitch: 0,
         lastX: 0,
         lastY: 0,
     };
@@ -114,9 +127,13 @@ class App {
 
         this._camera = {
             position: [0, 0, 0],
-            fov: 1.047198, // 60 degrees
+            fov: degreesToRadians(60),
+            target: [0, 0, 0],
+            distance: -5,
             zNear: 1,
             zFar: 100,
+            yaw: 0,
+            pitch: 0,
         };
     }
 
@@ -127,6 +144,8 @@ class App {
             MODEL_CATALOG[this._currentModelKey].rotation,
             await this._loadModel(MODEL_CATALOG[this._currentModelKey]),
         );
+
+        this._camera.target = this._entity.position;
 
         this._renderer.setClearColor(CLEAR_COLOR);
 
@@ -306,7 +325,7 @@ class App {
                 entityWrapper.appendChild(helpDisplay);
             }
 
-            { // Scroll
+            { // Camera
                 const canvasElement = this._canvas.getElement();
 
                 canvasElement.addEventListener("pointerdown", (event) => {
@@ -336,13 +355,20 @@ class App {
                     this._dragState.lastX = event.clientX;
                     this._dragState.lastY = event.clientY;
 
-                    if (this._entity) {
-                        this._entity.rotation = [
-                            this._entity.rotation[0] + dy * POINTER_SENSITIVITY,
-                            this._entity.rotation[1] - dx * POINTER_SENSITIVITY,
-                            this._entity.rotation[2],
-                        ];
-                    }
+                    this._camera.yaw -= dx * POINTER_SENSITIVITY;
+                    this._camera.pitch = Math.max(
+                        -MAX_CAMERA_PITCH,
+                        Math.min(MAX_CAMERA_PITCH, this._camera.pitch + dy * POINTER_SENSITIVITY),
+                    );
+
+                    const cosPitch = Math.cos(this._camera.pitch);
+                    const position: Vector3 = [
+                        this._camera.target[0] + this._camera.distance * cosPitch * Math.sin(this._camera.yaw),
+                        this._camera.target[1] + this._camera.distance * Math.sin(this._camera.pitch),
+                        this._camera.target[2] + this._camera.distance * cosPitch * Math.cos(this._camera.yaw),
+                    ];
+
+                    this._camera.position = position;
                 });
             }
         }

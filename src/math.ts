@@ -306,3 +306,38 @@ export function calculateBarycentricWeights(a: Vector2, b: Vector2, c: Vector2, 
         gamma: 1 - alpha - beta,
     }
 }
+
+const FACTOR = Math.PI / 180;
+export function degreesToRadians(degrees: number): number {
+    return degrees * FACTOR;
+}
+
+// | x.x, x.y, x.z, -dot(x,eye) | //
+// | y.x, y.y, y.z, -dot(y,eye) | //
+// | z.x, z.y, z.z, -dot(z,eye) | //
+// |  0    0    0        1      | //
+// Left-handed
+export function makeLookAtMatrix(eye: Vector3, target: Vector3, worldUp: Vector3): Matrix4 {
+    const z = normalize(subtractVector3s(target, eye));       // Vector pointing from eye to target
+    const x = normalize(crossProduct(worldUp, z)); // Perpendicular vector to world_up and z
+    const y = crossProduct(z, x);                   // Perpendicular vector to z and x
+
+    const matrix = makeMatrix4Identity();
+
+    matrix[0][0] = x[0];
+    matrix[0][1] = x[1];
+    matrix[0][2] = x[2];
+    matrix[0][3] = -dotProduct(x, eye);
+
+    matrix[1][0] = y[0];
+    matrix[1][1] = y[1];
+    matrix[1][2] = y[2];
+    matrix[1][3] = -dotProduct(y, eye);
+
+    matrix[2][0] = z[0];
+    matrix[2][1] = z[1];
+    matrix[2][2] = z[2];
+    matrix[2][3] = -dotProduct(z, eye);
+
+    return matrix;
+}
