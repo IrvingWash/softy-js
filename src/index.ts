@@ -1,6 +1,6 @@
 import { Canvas } from "./canvas";
 import { Camera, CullMode, RenderMode, Renderer } from "./renderer";
-import { ObjData, parseObj } from "./obj-parser";
+import { ObjData, parseObj, UVFlip } from "./obj-parser";
 
 import {
     Vector3,
@@ -70,23 +70,17 @@ interface Model {
 }
 
 const MODEL_CATALOG: Record<string, ModelMetadata> = {
+    vikingRoom: {
+        path: "assets/models/viking-room.obj",
+        texturePath: "assets/models/viking-room.png",
+        scale: [0.1, 0.1, 0.1] as Vector3,
+        rotation: [0.4, -3.2, 0] as Vector3,
+    },
     f22: {
         path: "assets/models/f22.obj",
         texturePath: "assets/models/f22.png",
         scale: [1, 1, 1] as Vector3,
         rotation: [-0.6, 0, 0] as Vector3,
-    },
-    drone: {
-        path: "assets/models/drone.obj",
-        texturePath: "assets/models/drone.png",
-        scale: [1, 1, 1] as Vector3,
-        rotation: [0, 0, 0] as Vector3,
-    },
-    vikingRoom: {
-        path: "assets/models/viking-room.obj",
-        texturePath: "",
-        scale: [0.1, 0.1, 0.1] as Vector3,
-        rotation: [0.4, -3.2, 0] as Vector3,
     },
 } as const;
 
@@ -100,7 +94,7 @@ class App {
 
     private _isGuiVisible: boolean = true;
 
-    private _currentModelKey: keyof typeof MODEL_CATALOG = "f22";
+    private _currentModelKey: keyof typeof MODEL_CATALOG = "vikingRoom";
 
     public constructor() {
         const canvas = Canvas.createFullscreen();
@@ -195,7 +189,7 @@ class App {
             try {
                 const response = await fetch(metadata.path);
                 const obj = await response.text();
-                const objData = parseObj(obj);
+                const objData = parseObj(obj, UVFlip.Flipped);
                 resolve(objData);
             } catch (error) {
                 reject(error);

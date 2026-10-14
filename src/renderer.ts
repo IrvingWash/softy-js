@@ -18,9 +18,9 @@ import {
 } from "./math";
 
 export enum RenderMode {
+    Textured = "Textured",
     Filled = "Filled",
     Wireframe = "Wireframe",
-    Textured = "Textured",
 }
 
 export enum CullMode {
@@ -68,7 +68,7 @@ export class Renderer {
 
     private _projectionMatrix: Matrix4 = makeMatrix4Identity();
 
-    private _renderMode: RenderMode = RenderMode.Filled;
+    private _renderMode: RenderMode = RenderMode.Textured;
     private _cullMode: CullMode = CullMode.BackFace;
     private _depthTesting: boolean = true;
 

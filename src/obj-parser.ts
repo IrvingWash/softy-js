@@ -13,13 +13,18 @@ export interface ObjFace {
     uvIndices: Vector3;
 }
 
+export const enum UVFlip {
+    Original = "Original",
+    Flipped = "Flipped",
+}
+
 const OBJ_INDEX_OFFSET = 1;
 const VERTEX_PREFIX = "v ";
 const NORMAL_PREFIX = "vn ";
 const UV_PREFIX = "vt ";
 const FACE_PREFIX = "f ";
 
-export function parseObj(data: string): ObjData {
+export function parseObj(data: string, uvFlip: UVFlip): ObjData {
     const objData: ObjData = {
         vertices: [],
         normals: [],
@@ -49,9 +54,12 @@ export function parseObj(data: string): ObjData {
         } else if (line.startsWith(UV_PREFIX)) {
             // vt u v
 
-            objData.uvs.push(
-                line.split(UV_PREFIX)[1].split(" ").map(Number) as Vector2
-            );
+            const uv = line.split(UV_PREFIX)[1].split(" ").map(Number) as Vector2;
+            if (uvFlip == UVFlip.Flipped) {
+                uv[1] = 1 - uv[1];
+            }
+
+            objData.uvs.push(uv);
         } else if (line.startsWith(FACE_PREFIX)) {
             // f v/uv/n
 
