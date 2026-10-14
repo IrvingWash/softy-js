@@ -6,6 +6,7 @@ import {
     calculateBarycentricWeights,
     calculateFaceNormal,
     clamp,
+    divideVector3,
     dotProduct,
     makeLookAtMatrix,
     makeMatrix4Identity,
@@ -54,7 +55,7 @@ interface ICanvas {
 
 interface FrameBuffer {
     image: ImageData;
-    colors: Uint32Array; // @Todo: do we need this even?
+    colors: Uint32Array;
 }
 
 interface Face {
@@ -82,7 +83,7 @@ export class Renderer {
     private _projectionMatrix: Matrix4 = makeMatrix4Identity();
     private _viewMatrix: Matrix4 = makeMatrix4Identity();
 
-    private _renderMode: RenderMode = RenderMode.Textured;
+    private _renderMode: RenderMode = RenderMode.ModelBased;
     private _cullMode: CullMode = CullMode.BackFace;
     private _depthTesting: boolean = true;
     private _fallbackTexture: ImageData;
@@ -163,6 +164,7 @@ export class Renderer {
                         triangleToRender.uvs[2],
                         triangleToRender.normal,
                         triangleToRender.texture ?? this._fallbackTexture,
+                        triangleToRender.color,
                     );
                     break;
                 case RenderMode.ModelBased:
@@ -176,6 +178,7 @@ export class Renderer {
                             triangleToRender.uvs[2],
                             triangleToRender.normal,
                             triangleToRender.texture,
+                            triangleToRender.color,
                         );
                     } else {
                         this._drawFilledTriangle(
@@ -242,7 +245,7 @@ export class Renderer {
         faces: Face[],
         texture: ImageData | null,
         modelTransform: Matrix4,
-        color: Vector3 = [0, 0, 0],
+        color: Vector3 = [255, 255, 255],
     ): void {
         const viewModel = multiplyMatrix4s(this._viewMatrix, modelTransform);
 
@@ -321,6 +324,7 @@ export class Renderer {
         cUv: Vector2,
         normal: Vector3,
         texture: ImageData,
+        color: Vector3,
     ): void {
         const { alpha, beta, gamma } = calculateBarycentricWeights(
             [a[0], a[1]],
@@ -346,18 +350,21 @@ export class Renderer {
 
         const index = (texelY * texture.width + texelX) * 4;
 
-        let color: Vector3 = [
+        let texelColor: Vector3 = [
             texture.data[index],
             texture.data[index + 1],
             texture.data[index + 2],
         ];
+        if (color[0] != 255 || color[1] != 255 || color[2] != 255) {
+            texelColor = divideVector3(multiplyVector3s(texelColor, color), 255);
+        }
 
         if (this._directionalLight) {
             const alignment = -dotProduct(normal, this._directionalLight.direction);
-            color = calculateShadedColor(color, this._directionalLight.color, alignment);
+            texelColor = calculateShadedColor(texelColor, this._directionalLight.color, alignment);
         }
 
-        this._drawPixel([x, y], color);
+        this._drawPixel([x, y], texelColor);
 
         if (this._depthTesting) {
             this._depthBuffer[y * this._cachedCanvasSize[0] + x] = interpolatedReciprocalW;
@@ -422,6 +429,7 @@ export class Renderer {
         uv3: Vector2,
         normal: Vector3,
         texture: ImageData,
+        color: Vector3,
     ): void {
         let [x0, y0, z0, w0] = vertex1;
         let [x1, y1, z1, w1] = vertex2;
@@ -485,6 +493,7 @@ export class Renderer {
                         [u2, v2],
                         normal,
                         texture,
+                        color,
                     );
                 }
             }
@@ -520,6 +529,7 @@ export class Renderer {
                         [u2, v2],
                         normal,
                         texture,
+                        color,
                     );
                 }
             }
