@@ -20,6 +20,7 @@ import {
 } from "./math";
 
 export enum RenderMode {
+    ModelBased = "ModelBased",
     Textured = "Textured",
     Filled = "Filled",
     Wireframe = "Wireframe",
@@ -53,12 +54,20 @@ interface ICanvas {
 
 interface FrameBuffer {
     image: ImageData;
-    colors: Uint32Array;
+    colors: Uint32Array; // @Todo: do we need this even?
 }
 
 interface Face {
     vertexIndices: Vector3;
     uvIndices: Vector3;
+}
+
+interface TriangleToRender {
+    positions: [Vector4, Vector4, Vector4];
+    uvs: [Vector2, Vector2, Vector2];
+    color: Vector3;
+    normal: Vector3;
+    texture: ImageData | null;
 }
 
 export class Renderer {
@@ -68,6 +77,7 @@ export class Renderer {
     private _frameBuffer: FrameBuffer;
     private _clearColor: Vector3 = [0, 0, 0];
     private _depthBuffer: Float32Array;
+    private _trianglesToRender: TriangleToRender[] = [];
 
     private _projectionMatrix: Matrix4 = makeMatrix4Identity();
     private _viewMatrix: Matrix4 = makeMatrix4Identity();
@@ -75,6 +85,7 @@ export class Renderer {
     private _renderMode: RenderMode = RenderMode.Textured;
     private _cullMode: CullMode = CullMode.BackFace;
     private _depthTesting: boolean = true;
+    private _fallbackTexture: ImageData;
 
     private _directionalLight: DirectionalLight | null = null;
 
@@ -84,6 +95,12 @@ export class Renderer {
 
         this._frameBuffer = this._createFrameBuffer();
         this._depthBuffer = this._createDepthBuffer();
+
+        this._fallbackTexture = this._canvas.createImageData(1, 1);
+        this._fallbackTexture.data[0] = 255;
+        this._fallbackTexture.data[1] = 255;
+        this._fallbackTexture.data[2] = 255;
+        this._fallbackTexture.data[3] = 255;
 
         this._canvas.subscribeResize(this._onResize);
     }
@@ -95,6 +112,7 @@ export class Renderer {
     public startDrawing(camera: Camera): void {
         this._clearFrameBuffer();
         this._clearDepthBuffer();
+        this._trianglesToRender = [];
 
         this._projectionMatrix = makePerspectiveProjectionMatrix(
             this._cachedCanvasSize[1] / this._cachedCanvasSize[0],
@@ -110,6 +128,69 @@ export class Renderer {
     }
 
     public finishDrawing(): void {
+        // Just a simple painters algorithm for now. @Todo
+        if (this._depthTesting && this._renderMode != RenderMode.Textured) {
+            this._trianglesToRender.sort((a, b) => b.positions[0][2] - a.positions[0][2]);
+        }
+
+        for (const triangleToRender of this._trianglesToRender) {
+            const [a, b, c] = triangleToRender.positions;
+
+            switch (this._renderMode) {
+                case RenderMode.Filled:
+                    this._drawFilledTriangle(
+                        [a[0], a[1]],
+                        [b[0], b[1]],
+                        [c[0], c[1]],
+                        triangleToRender.color,
+                    );
+                    break;
+                case RenderMode.Wireframe:
+                    this._drawTriangle(
+                        [a[0], a[1]],
+                        [b[0], b[1]],
+                        [c[0], c[1]],
+                        triangleToRender.color,
+                    );
+                    break;
+                case RenderMode.Textured:
+                    this._drawTexturedTriangle(
+                        a,
+                        b,
+                        c,
+                        triangleToRender.uvs[0],
+                        triangleToRender.uvs[1],
+                        triangleToRender.uvs[2],
+                        triangleToRender.normal,
+                        triangleToRender.texture ?? this._fallbackTexture,
+                    );
+                    break;
+                case RenderMode.ModelBased:
+                    if (triangleToRender.texture) {
+                        this._drawTexturedTriangle(
+                            a,
+                            b,
+                            c,
+                            triangleToRender.uvs[0],
+                            triangleToRender.uvs[1],
+                            triangleToRender.uvs[2],
+                            triangleToRender.normal,
+                            triangleToRender.texture,
+                        );
+                    } else {
+                        this._drawFilledTriangle(
+                            [a[0], a[1]],
+                            [b[0], b[1]],
+                            [c[0], c[1]],
+                            triangleToRender.color,
+                        );
+                    }
+                    break;
+                default:
+                    exhaustiveCheck(this._renderMode);
+            }
+        }
+
         this._canvas.putImageData(this._frameBuffer.image, 0, 0);
     }
 
@@ -159,19 +240,10 @@ export class Renderer {
         vertices: Vector3[],
         uvs: Vector2[],
         faces: Face[],
-        texture: ImageData,
+        texture: ImageData | null,
         modelTransform: Matrix4,
         color: Vector3 = [0, 0, 0],
     ): void {
-        interface TriangleToRender {
-            positions: [Vector4, Vector4, Vector4];
-            uvs: [Vector2, Vector2, Vector2];
-            color: Vector3;
-            normal: Vector3;
-        }
-
-        const trianglesToRender: TriangleToRender[] = [];
-
         const viewModel = multiplyMatrix4s(this._viewMatrix, modelTransform);
 
         for (const face of faces) {
@@ -224,7 +296,7 @@ export class Renderer {
             const bViewported = this._transformToViewportCenter(bProjected);
             const cViewported = this._transformToViewportCenter(cProjected);
 
-            trianglesToRender.push({
+            this._trianglesToRender.push({
                 positions: [aViewported, bViewported, cViewported],
                 uvs: [
                     uvs[face.uvIndices[0]],
@@ -233,49 +305,8 @@ export class Renderer {
                 ],
                 color: faceColor,
                 normal: faceNormal,
+                texture,
             });
-        }
-
-        // Just a simple painters algorithm for now. @Todo
-        if (this._depthTesting && this._renderMode != RenderMode.Textured) {
-            trianglesToRender.sort((a, b) => b.positions[0][2] - a.positions[0][2]);
-        }
-
-        for (const triangleToRender of trianglesToRender) {
-            const [a, b, c] = triangleToRender.positions;
-
-            switch (this._renderMode) {
-                case RenderMode.Filled:
-                    this._drawFilledTriangle(
-                        [a[0], a[1]],
-                        [b[0], b[1]],
-                        [c[0], c[1]],
-                        triangleToRender.color,
-                    );
-                    break;
-                case RenderMode.Wireframe:
-                    this._drawTriangle(
-                        [a[0], a[1]],
-                        [b[0], b[1]],
-                        [c[0], c[1]],
-                        triangleToRender.color,
-                    );
-                    break;
-                case RenderMode.Textured:
-                    this._drawTexturedTriangle(
-                        a,
-                        b,
-                        c,
-                        triangleToRender.uvs[0],
-                        triangleToRender.uvs[1],
-                        triangleToRender.uvs[2],
-                        triangleToRender.normal,
-                        texture,
-                    );
-                    break;
-                default:
-                    exhaustiveCheck(this._renderMode);
-            }
         }
     }
 
