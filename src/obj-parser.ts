@@ -1,25 +1,29 @@
-import { Vector3 } from "./math";
+import { Vector3, Vector2 } from "./math";
 
 export interface ObjData {
     vertices: Vector3[];
     normals: Vector3[];
+    uvs: Vector2[];
     faces: ObjFace[];
 }
 
 export interface ObjFace {
     vertexIndices: Vector3;
     normalIndices: Vector3;
+    uvIndices: Vector3;
 }
 
 const OBJ_INDEX_OFFSET = 1;
 const VERTEX_PREFIX = "v ";
 const NORMAL_PREFIX = "vn ";
+const UV_PREFIX = "vt ";
 const FACE_PREFIX = "f ";
 
 export function parseObj(data: string): ObjData {
     const objData: ObjData = {
         vertices: [],
         normals: [],
+        uvs: [],
         faces: [],
     };
 
@@ -42,6 +46,12 @@ export function parseObj(data: string): ObjData {
             objData.normals.push(
                 line.split(NORMAL_PREFIX)[1].split(" ").map(Number) as Vector3
             );
+        } else if (line.startsWith(UV_PREFIX)) {
+            // vt u v
+
+            objData.uvs.push(
+                line.split(UV_PREFIX)[1].split(" ").map(Number) as Vector2
+            );
         } else if (line.startsWith(FACE_PREFIX)) {
             // f v/uv/n
 
@@ -49,17 +59,20 @@ export function parseObj(data: string): ObjData {
 
             const vertexIndices: Vector3 = [0, 0, 0];
             const normalIndices: Vector3 = [0, 0, 0];
+            const uvIndices: Vector3 = [0, 0, 0];
+
             let i = 0;
             for (const vertex of vertices) {
-                const [v, _uv, n] = vertex.split("/").map(Number);
+                const [v, uv, n] = vertex.split("/").map(Number);
 
                 vertexIndices[i] = v - OBJ_INDEX_OFFSET;
                 normalIndices[i] = n - OBJ_INDEX_OFFSET;
+                uvIndices[i] = uv - OBJ_INDEX_OFFSET;
 
                 i++;
             }
 
-            objData.faces.push({ vertexIndices, normalIndices });
+            objData.faces.push({ vertexIndices, normalIndices, uvIndices });
         }
     }
 

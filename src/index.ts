@@ -201,7 +201,7 @@ class App {
         });
 
         const [image, objData] = await Promise.all([imageLoadPromise, objLoadPromise]);
-        
+
         return {
             objData,
             texture: image,
