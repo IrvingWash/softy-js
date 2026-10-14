@@ -66,7 +66,7 @@ interface Face {
 interface TriangleToRender {
     positions: [Vector4, Vector4, Vector4];
     uvs: [Vector2, Vector2, Vector2];
-    color: Vector3;
+    tint: Vector3;
     normal: Vector3;
     texture: ImageData | null;
 }
@@ -143,7 +143,7 @@ export class Renderer {
                         [a[0], a[1]],
                         [b[0], b[1]],
                         [c[0], c[1]],
-                        triangleToRender.color,
+                        triangleToRender.tint,
                     );
                     break;
                 case RenderMode.Wireframe:
@@ -151,7 +151,7 @@ export class Renderer {
                         [a[0], a[1]],
                         [b[0], b[1]],
                         [c[0], c[1]],
-                        triangleToRender.color,
+                        triangleToRender.tint,
                     );
                     break;
                 case RenderMode.Textured:
@@ -164,7 +164,7 @@ export class Renderer {
                         triangleToRender.uvs[2],
                         triangleToRender.normal,
                         triangleToRender.texture ?? this._fallbackTexture,
-                        triangleToRender.color,
+                        triangleToRender.tint,
                     );
                     break;
                 case RenderMode.ModelBased:
@@ -178,14 +178,14 @@ export class Renderer {
                             triangleToRender.uvs[2],
                             triangleToRender.normal,
                             triangleToRender.texture,
-                            triangleToRender.color,
+                            triangleToRender.tint,
                         );
                     } else {
                         this._drawFilledTriangle(
                             [a[0], a[1]],
                             [b[0], b[1]],
                             [c[0], c[1]],
-                            triangleToRender.color,
+                            triangleToRender.tint,
                         );
                     }
                     break;
@@ -245,7 +245,7 @@ export class Renderer {
         faces: Face[],
         texture: ImageData | null,
         modelTransform: Matrix4,
-        color: Vector3 = [255, 255, 255],
+        tint: Vector3 = [255, 255, 255],
     ): void {
         const viewModel = multiplyMatrix4s(this._viewMatrix, modelTransform);
 
@@ -284,11 +284,11 @@ export class Renderer {
                     exhaustiveCheck(this._cullMode);
             }
 
-            let faceColor: Vector3 = color;
+            let faceTint: Vector3 = tint;
             if (this._directionalLight && this._renderMode == RenderMode.Filled) { // We'll do this in drawTexel if it's textured
                 const alignment = -dotProduct(faceNormal, this._directionalLight.direction);
 
-                faceColor = calculateShadedColor(faceColor, this._directionalLight.color, alignment);
+                faceTint = calculateShadedColor(faceTint, this._directionalLight.color, alignment);
             }
 
             const aProjected = projectVectorPerspective(this._projectionMatrix, [aTransformed[0], aTransformed[1], aTransformed[2]]);
@@ -306,7 +306,7 @@ export class Renderer {
                     uvs[face.uvIndices[1]],
                     uvs[face.uvIndices[2]],
                 ],
-                color: faceColor,
+                tint: faceTint,
                 normal: faceNormal,
                 texture,
             });
@@ -324,7 +324,7 @@ export class Renderer {
         cUv: Vector2,
         normal: Vector3,
         texture: ImageData,
-        color: Vector3,
+        tint: Vector3,
     ): void {
         const { alpha, beta, gamma } = calculateBarycentricWeights(
             [a[0], a[1]],
@@ -355,8 +355,8 @@ export class Renderer {
             texture.data[index + 1],
             texture.data[index + 2],
         ];
-        if (color[0] != 255 || color[1] != 255 || color[2] != 255) {
-            texelColor = divideVector3(multiplyVector3s(texelColor, color), 255);
+        if (tint[0] != 255 || tint[1] != 255 || tint[2] != 255) {
+            texelColor = divideVector3(multiplyVector3s(texelColor, tint), 255);
         }
 
         if (this._directionalLight) {
@@ -429,7 +429,7 @@ export class Renderer {
         uv3: Vector2,
         normal: Vector3,
         texture: ImageData,
-        color: Vector3,
+        tint: Vector3,
     ): void {
         let [x0, y0, z0, w0] = vertex1;
         let [x1, y1, z1, w1] = vertex2;
@@ -493,7 +493,7 @@ export class Renderer {
                         [u2, v2],
                         normal,
                         texture,
-                        color,
+                        tint,
                     );
                 }
             }
@@ -529,7 +529,7 @@ export class Renderer {
                         [u2, v2],
                         normal,
                         texture,
-                        color,
+                        tint,
                     );
                 }
             }
