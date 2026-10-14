@@ -16,7 +16,7 @@ export class Canvas {
 
     public static create(width: number, height: number): Canvas {
         const element = document.querySelector<HTMLCanvasElement>(`#${MAIN_CANVAS_ID}`);
-        if (element == null) {
+        if (element === null) {
             throw new Error("Failed to find main canvas");
         }
 
@@ -25,7 +25,7 @@ export class Canvas {
         element.style.position = "absolute";
 
         const context = element.getContext("2d");
-        if (context == null) {
+        if (context === null) {
             throw new Error("Failed to get the 2D context");
         }
 

@@ -506,13 +506,13 @@ export class Renderer {
         }
 
         // The triangle is already flat-bottom
-        if (y1 == y2) {
+        if (y1 === y2) {
             this._drawFlatBottomTriangle(x0, y0, x1, y1, x2, y2, color);
             return;
         }
 
         // The triangle is already flat-top
-        if (y0 == y1) {
+        if (y0 === y1) {
             this._drawFlatTopTriangle(x0, y0, x1, y1, x2, y2, color);
             return;
         }
@@ -533,7 +533,7 @@ export class Renderer {
         x2: number, y2: number,
         color: Vector3,
     ): void {
-        if (y1 - y0 == 0 || y2 - y0 == 0) {
+        if (y1 - y0 === 0 || y2 - y0 === 0) {
             return;
         }
 
@@ -557,7 +557,7 @@ export class Renderer {
         x2: number, y2: number,
         color: Vector3,
     ): void {
-        if (y2 - y0 == 0 || y2 - y1 == 0) {
+        if (y2 - y0 === 0 || y2 - y1 === 0) {
             return;
         }
 

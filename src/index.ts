@@ -247,15 +247,19 @@ class App {
             button.addEventListener("click", () => {
                 for (const child of menuWrapper.children) {
                     if (this._isGuiVisible) {
-                        if (child.id == "hideButton") {
+                        if (child.id === "hideButton") {
+                            button.innerText = "Show";
                             continue;
                         }
 
-                        button.innerText = "Show";
-                        child.style.display = "none";
+                        (child as HTMLElement).style.display = "none";
                     } else {
-                        child.style.display = "flex"; // This is stupid, but looks ok for now
-                        button.innerText = "Hide";
+                        if (child.id === "hideButton") {
+                            button.innerText = "Hide";
+                            continue;
+                        }
+
+                        (child as HTMLElement).style.display = "flex"; // This is stupid, but looks ok for now
                     }
                 }
 

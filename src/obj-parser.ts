@@ -35,7 +35,7 @@ export function parseObj(data: string, uvFlip: UVFlip): ObjData {
     const lines = data.split("\n");
 
     for (const line of lines) {
-        if (line == "" || line.startsWith("#")) {
+        if (line === "" || line.startsWith("#")) {
             continue;
         }
 
@@ -55,7 +55,7 @@ export function parseObj(data: string, uvFlip: UVFlip): ObjData {
             // vt u v
 
             const uv = line.split(UV_PREFIX)[1].split(" ").map(Number) as Vector2;
-            if (uvFlip == UVFlip.Flipped) {
+            if (uvFlip === UVFlip.Flipped) {
                 uv[1] = 1 - uv[1];
             }
 
