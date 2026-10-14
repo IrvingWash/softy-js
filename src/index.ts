@@ -365,7 +365,7 @@ class App {
                     };
                 });
                 canvasElement.addEventListener("pointerup", (event) => {
-                    canvasElement.style.cursor = "pointer";
+                    canvasElement.style.cursor = "default";
                     canvasElement.releasePointerCapture(event.pointerId);
 
                     this._dragState.isDragging = false;

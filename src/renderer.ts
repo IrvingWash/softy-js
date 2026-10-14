@@ -161,6 +161,7 @@ export class Renderer {
         faces: Face[],
         texture: ImageData,
         modelTransform: Matrix4,
+        color: Vector3 = [0, 0, 0],
     ): void {
         interface TriangleToRender {
             positions: [Vector4, Vector4, Vector4];
@@ -208,7 +209,7 @@ export class Renderer {
                     exhaustiveCheck(this._cullMode);
             }
 
-            let faceColor: Vector3 = [255, 255, 255];
+            let faceColor: Vector3 = color;
             if (this._directionalLight && this._renderMode == RenderMode.Filled) { // We'll do this in drawTexel if it's textured
                 const alignment = -dotProduct(faceNormal, this._directionalLight.direction);
 
