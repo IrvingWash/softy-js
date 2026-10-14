@@ -142,9 +142,7 @@ export class Renderer {
             switch (this._renderMode) {
                 case RenderMode.Filled:
                     this._drawFilledTriangle(
-                        [a[0], a[1]],
-                        [b[0], b[1]],
-                        [c[0], c[1]],
+                        a, b, c,
                         triangleToRender.tint,
                     );
                     break;
@@ -184,9 +182,7 @@ export class Renderer {
                         );
                     } else {
                         this._drawFilledTriangle(
-                            [a[0], a[1]],
-                            [b[0], b[1]],
-                            [c[0], c[1]],
+                            a, b, c,
                             triangleToRender.tint,
                         );
                     }
@@ -543,9 +539,9 @@ export class Renderer {
     }
 
     private _drawFilledTriangle(
-        vertex1: Vector2,
-        vertex2: Vector2,
-        vertex3: Vector2,
+        vertex1: Vector4,
+        vertex2: Vector4,
+        vertex3: Vector4,
         color: Vector3,
     ): void {
         let [x0, y0] = vertex1;
@@ -579,7 +575,6 @@ export class Renderer {
             return;
         }
 
-
         // Find the other end of the middle separator (M) (the first end is x1 y1)
         const My = y1;
         const Mx = (x2 - x0) * (y1 - y0) / (y2 - y0) + x0;
@@ -602,14 +597,17 @@ export class Renderer {
         const inverseSlopeLeft = (x1 - x0) / (y1 - y0);
         const inverseSlopeRight = (x2 - x0) / (y2 - y0);
 
-        let startX = x0;
-        let endX = x0;
-
         for (let y = y0; y <= y2; y++) {
-            this._drawLine([startX, y], [endX, y], color);
+            let startX = x0 + (y - y0) * inverseSlopeLeft;
+            let endX = x0 + (y - y0) * inverseSlopeRight;
 
-            startX += inverseSlopeLeft;
-            endX += inverseSlopeRight;
+            if (endX < startX) {
+                [startX, endX] = [endX, startX];
+            }
+
+            for (let x = Math.round(startX); x <= Math.round(endX); x++) {
+                this._drawPixel([x, y], color);
+            }
         }
     }
 
@@ -626,14 +624,17 @@ export class Renderer {
         const inverseSlopeLeft = (x2 - x0) / (y2 - y0);
         const inverseSlopeRight = (x2 - x1) / (y2 - y1);
 
-        let startX = x2;
-        let endX = x2;
+        for (let y = Math.round(y2); y >= Math.round(y0); y--) {
+            let startX = x2 + (y - y2) * inverseSlopeLeft;
+            let endX = x2 + (y - y2) * inverseSlopeRight;
 
-        for (let y = y2; y >= y0; y--) {
-            this._drawLine([startX, y], [endX, y], color);
+            if (endX < startX) {
+                [startX, endX] = [endX, startX];
+            }
 
-            startX -= inverseSlopeLeft;
-            endX -= inverseSlopeRight;
+            for (let x = Math.round(startX); x <= Math.round(endX); x++) {
+                this._drawPixel([x, y], color);
+            }
         }
     }
 
