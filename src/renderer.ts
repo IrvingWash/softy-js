@@ -35,6 +35,7 @@ export enum CullMode {
 export interface DirectionalLight {
     direction: Vector3;
     color: Vector3;
+    normalizedDirection: Vector3;
 }
 
 interface Camera {
@@ -223,6 +224,7 @@ export class Renderer {
 
     public setDirectionalLight(light: DirectionalLight) {
         this._directionalLight = light;
+        this._directionalLight.normalizedDirection = normalize(this._directionalLight.direction);
     }
 
     public getDirectionalLight(): DirectionalLight | null {
@@ -284,7 +286,7 @@ export class Renderer {
 
             let faceTint: Vector3 = tint;
             if (this._directionalLight && this._renderMode == RenderMode.Filled) { // We'll do this in drawTexel if it's textured
-                const alignment = -dotProduct(faceNormal, normalize(this._directionalLight.direction));
+                const alignment = -dotProduct(faceNormal, this._directionalLight.normalizedDirection);
                 faceTint = calculateShadedColor(faceTint, this._directionalLight.color, alignment);
             }
 
@@ -357,7 +359,7 @@ export class Renderer {
         }
 
         if (this._directionalLight) {
-            const alignment = -dotProduct(normal, normalize(this._directionalLight.direction));
+            const alignment = -dotProduct(normal, this._directionalLight.normalizedDirection);
             texelColor = calculateShadedColor(texelColor, this._directionalLight.color, alignment);
         }
 

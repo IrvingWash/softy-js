@@ -92,7 +92,11 @@ export class ExampleApp {
 
                 const toSet = previous !== null
                     ? { ...previous, color: color }
-                    : { direction: SUN_DIRECTION, color };
+                    : {
+                        direction: SUN_DIRECTION,
+                        color,
+                        normalizedDirection: [0, 0, 0] as Vector3, // Normalized inside the call
+                    };
 
                 this._renderer.setDirectionalLight(toSet);
             },
@@ -101,7 +105,11 @@ export class ExampleApp {
 
                 const toSet = previous !== null
                     ? { ...previous, direction: [x, previous.direction[1], previous.direction[2]] as Vector3 }
-                    : { color: SUN_COLOR, direction: [x, SUN_DIRECTION[1], SUN_DIRECTION[2]] as Vector3 };
+                    : {
+                        color: SUN_COLOR,
+                        direction: [x, SUN_DIRECTION[1], SUN_DIRECTION[2]] as Vector3,
+                        normalizedDirection: [0, 0, 0] as Vector3, // Normalized inside the call
+                    };
 
                 this._renderer.setDirectionalLight(toSet);
             },
@@ -110,7 +118,11 @@ export class ExampleApp {
 
                 const toSet = previous !== null
                     ? { ...previous, direction: [previous.direction[0], y, previous.direction[2]] as Vector3 }
-                    : { color: SUN_COLOR, direction: [SUN_DIRECTION[0], y, SUN_DIRECTION[2]] as Vector3 };
+                    : {
+                        color: SUN_COLOR,
+                        direction: [SUN_DIRECTION[0], y,SUN_DIRECTION[2]] as Vector3,
+                        normalizedDirection: [0, 0, 0] as Vector3, // Normalized inside the call
+                    };
 
                 this._renderer.setDirectionalLight(toSet);
             },
@@ -119,7 +131,11 @@ export class ExampleApp {
 
                 const toSet = previous !== null
                     ? { ...previous, direction: [previous.direction[0], previous.direction[1], z] as Vector3 }
-                    : { color: SUN_COLOR, direction: [SUN_DIRECTION[0], SUN_DIRECTION[1], z] as Vector3 };
+                    : {
+                        color: SUN_COLOR,
+                        direction: [SUN_DIRECTION[0], SUN_DIRECTION[1], z] as Vector3,
+                        normalizedDirection: [0, 0, 0] as Vector3, // Normalized inside the call
+                    };
 
                 this._renderer.setDirectionalLight(toSet);
             },
@@ -136,6 +152,7 @@ export class ExampleApp {
         this._renderer.setDirectionalLight({
             color: SUN_COLOR,
             direction: SUN_DIRECTION,
+            normalizedDirection: [0, 0, 0] as Vector3, // Normalized inside the call
         });
     }
 
@@ -175,6 +192,7 @@ export class ExampleApp {
             this._renderer.getClearColor(),
             this._renderer.getDepthTesting(),
             this._renderer.getDirectionalLight()?.color ?? [255, 255, 255],
+            this._renderer.getDirectionalLight()?.direction ?? SUN_DIRECTION,
         );
 
         this._camera.update(this._gui.consumeDragState().delta);

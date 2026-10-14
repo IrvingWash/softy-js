@@ -26,6 +26,9 @@ export class GUI {
     private _clearColorPicker!: HTMLInputElement;
     private _depthTestCheckbox!: HTMLInputElement;
     private _directionalLightColorPicker!: HTMLInputElement;
+    private _directionalLightXDirectionSlider!: HTMLInputElement;
+    private _directionalLightYDirectionSlider!: HTMLInputElement;
+    private _directionalLightZDirectionSlider!: HTMLInputElement;
 
     public constructor(
         canvas: Canvas,
@@ -81,11 +84,15 @@ export class GUI {
         clearColor: Vector3,
         depthTesting: boolean,
         directionalLightColor: Vector3,
+        directionalLightDirection: Vector3,
     ): void {
         this._tintPicker.value = vector3ColorToCssHex(tint);
         this._clearColorPicker.value = vector3ColorToCssHex(clearColor);
         this._depthTestCheckbox.checked = depthTesting;
         this._directionalLightColorPicker.value = vector3ColorToCssHex(directionalLightColor);
+        this._directionalLightXDirectionSlider.value = String(directionalLightDirection[0]);
+        this._directionalLightYDirectionSlider.value = String(directionalLightDirection[1]);
+        this._directionalLightZDirectionSlider.value = String(directionalLightDirection[2]);
     }
 
     public consumeDragState(): DragState {
@@ -164,45 +171,45 @@ export class GUI {
             directionalLightXDirectionLabel.innerText = "X direction";
             directionalLightWrapper.appendChild(directionalLightXDirectionLabel);
 
-            const directionalLightXDirectionSlider = document.createElement("input");
-            directionalLightXDirectionSlider.type = "range";
-            directionalLightXDirectionSlider.min = "0";
-            directionalLightXDirectionSlider.max = "1";
-            directionalLightXDirectionSlider.step = "0.1";
-            directionalLightXDirectionSlider.addEventListener("input", () => {
-                onXDirectionChange(Number(directionalLightXDirectionSlider.value));
+            this._directionalLightXDirectionSlider = document.createElement("input");
+            this._directionalLightXDirectionSlider.type = "range";
+            this._directionalLightXDirectionSlider.min = "0";
+            this._directionalLightXDirectionSlider.max = "1";
+            this._directionalLightXDirectionSlider.step = "0.1";
+            this._directionalLightXDirectionSlider.addEventListener("input", () => {
+                onXDirectionChange(Number(this._directionalLightXDirectionSlider.value));
             });
-            directionalLightWrapper.appendChild(directionalLightXDirectionSlider);
+            directionalLightWrapper.appendChild(this._directionalLightXDirectionSlider);
         }
         { // Y direction
             const directionalLightYDirectionLabel = document.createElement("label");
             directionalLightYDirectionLabel.innerText = "Y direction";
             directionalLightWrapper.appendChild(directionalLightYDirectionLabel);
 
-            const directionalLightYDirectionSlider = document.createElement("input");
-            directionalLightYDirectionSlider.type = "range";
-            directionalLightYDirectionSlider.min = "0";
-            directionalLightYDirectionSlider.max = "1";
-            directionalLightYDirectionSlider.step = "0.1";
-            directionalLightYDirectionSlider.addEventListener("input", () => {
-                onYDirectionChange(Number(directionalLightYDirectionSlider.value));
+            this._directionalLightYDirectionSlider = document.createElement("input");
+            this._directionalLightYDirectionSlider.type = "range";
+            this._directionalLightYDirectionSlider.min = "0";
+            this._directionalLightYDirectionSlider.max = "1";
+            this._directionalLightYDirectionSlider.step = "0.1";
+            this._directionalLightYDirectionSlider.addEventListener("input", () => {
+                onYDirectionChange(Number(this._directionalLightYDirectionSlider.value));
             });
-            directionalLightWrapper.appendChild(directionalLightYDirectionSlider);
+            directionalLightWrapper.appendChild(this._directionalLightYDirectionSlider);
         }
         { // Z direction
             const directionalLightZDirectionLabel = document.createElement("label");
             directionalLightZDirectionLabel.innerText = "Z direction";
             directionalLightWrapper.appendChild(directionalLightZDirectionLabel);
 
-            const directionalLightZDirectionSlider = document.createElement("input");
-            directionalLightZDirectionSlider.type = "range";
-            directionalLightZDirectionSlider.min = "0";
-            directionalLightZDirectionSlider.max = "1";
-            directionalLightZDirectionSlider.step = "0.1";
-            directionalLightZDirectionSlider.addEventListener("input", () => {
-                onZDirectionChange(Number(directionalLightZDirectionSlider.value));
+            this._directionalLightZDirectionSlider = document.createElement("input");
+            this._directionalLightZDirectionSlider.type = "range";
+            this._directionalLightZDirectionSlider.min = "0";
+            this._directionalLightZDirectionSlider.max = "1";
+            this._directionalLightZDirectionSlider.step = "0.1";
+            this._directionalLightZDirectionSlider.addEventListener("input", () => {
+                onZDirectionChange(Number(this._directionalLightZDirectionSlider.value));
             });
-            directionalLightWrapper.appendChild(directionalLightZDirectionSlider);
+            directionalLightWrapper.appendChild(this._directionalLightZDirectionSlider);
         }
     }
 
