@@ -162,6 +162,7 @@ class App {
         return objData;
     }
 
+    // @Todo: the directional light direction controls are broken now, because the values come back normalized
     private _createGui() { // This is a dumpster...
         const menuWrapper = document.createElement("div");
         menuWrapper.style.zIndex = "999";
@@ -404,6 +405,31 @@ class App {
                 cullModeDropDown.value = this._renderer.getCullMode();
 
                 cullModeDropDown.addEventListener("change", () => this._renderer.setCullMode(cullModeDropDown.value as CullMode));
+            }
+
+            { // Depth testing
+                const depthTestingWrapper = document.createElement("div");
+                depthTestingWrapper.style.display = "flex";
+                depthTestingWrapper.style.justifyContent = "space-between";
+                depthTestingWrapper.style.margin = menuItemWrapperMargin;
+                rendererWrapper.appendChild(depthTestingWrapper);
+
+                const cullModeLabel = document.createElement("label");
+                cullModeLabel.innerText = "Depth testing"
+                depthTestingWrapper.appendChild(cullModeLabel);
+
+                const depthTestingCheckbox = document.createElement("input");
+                depthTestingCheckbox.type = "checkbox";
+                depthTestingWrapper.appendChild(depthTestingCheckbox);
+
+                depthTestingCheckbox.checked = this._renderer.getDepthTesting();
+
+                depthTestingCheckbox.addEventListener(
+                    "change",
+                    () => {
+                        this._renderer.setDepthTesting(depthTestingCheckbox.checked)
+                    }
+                );
             }
 
             { // Directional Light

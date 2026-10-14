@@ -66,6 +66,7 @@ export class Renderer {
 
     private _polygonMode: PolygonMode = PolygonMode.Filled;
     private _cullMode: CullMode = CullMode.BackFace;
+    private _depthTesting: boolean = true;
 
     private _directionalLight: DirectionalLight | null = null;
 
@@ -144,6 +145,14 @@ export class Renderer {
         return this._directionalLight;
     }
 
+    public setDepthTesting(value: boolean): void {
+        this._depthTesting = value;
+    }
+
+    public getDepthTesting(): boolean {
+        return this._depthTesting;
+    }
+
     public draw(vertices: Vector3[], faces: Face[], modelTransform: Matrix4): void {
         interface TriangleToRender {
             positions: [Vector4, Vector4, Vector4];
@@ -205,7 +214,9 @@ export class Renderer {
         }
 
         // Just a simple painters algorithm for now. @Todo
-        trianglesToRender.sort((a, b) => b.positions[0][2] - a.positions[0][2]);
+        if (this._depthTesting) {
+            trianglesToRender.sort((a, b) => b.positions[0][2] - a.positions[0][2]);
+        }
 
         for (const triangleToRender of trianglesToRender) {
             const [a, b, c] = triangleToRender.positions;
