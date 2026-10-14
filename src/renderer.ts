@@ -64,7 +64,7 @@ export class Renderer {
 
     private _frameBuffer: FrameBuffer;
     private _clearColor: Vector3 = [0, 0, 0];
-    private _depthBuffer: Uint32Array;
+    private _depthBuffer: Float32Array;
 
     private _projectionMatrix: Matrix4 = makeMatrix4Identity();
 
@@ -577,10 +577,10 @@ export class Renderer {
         this._depthBuffer.fill(0);
     }
 
-    private _createDepthBuffer(): Uint32Array {
+    private _createDepthBuffer(): Float32Array {
         const [width, height] = this._cachedCanvasSize;
 
-        return new Uint32Array(width * height);
+        return new Float32Array(width * height);
     }
 
     private _clearFrameBuffer(): void {
