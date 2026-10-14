@@ -28,14 +28,14 @@ class Entity {
     public scale: Vector3 = [1, 1, 1];
     public rotation: Vector3 = [0, 0, 0];
 
-    public objData: ObjData | null = null;
+    public model: Model;
 
-    public constructor(position: Vector3, scale: Vector3, rotation: Vector3, objData: ObjData | null) {
+    public constructor(position: Vector3, scale: Vector3, rotation: Vector3, model: Model) {
         this.position = position;
         this.scale = scale;
         this.rotation = rotation;
 
-        this.objData = objData;
+        this.model = model;
     }
 
     public update(_deltaTime: number) {}
@@ -57,19 +57,34 @@ const CLEAR_COLOR: Vector3 = [135, 206, 235];
 const SUN_COLOR: Vector3 = [255, 255, 255];
 const SUN_DIRECTION: Vector3 = [0, 0, 1];
 
-const MODEL_CATALOG = {
+interface ModelMetadata {
+    path: string;
+    texturePath: string;
+    scale: Vector3;
+    rotation: Vector3;
+}
+
+interface Model {
+    objData: ObjData;
+    texture: ImageData;
+}
+
+const MODEL_CATALOG: Record<string, ModelMetadata> = {
     f22: {
         path: "assets/models/f22.obj",
+        texturePath: "assets/models/f22.png",
         scale: [1, 1, 1] as Vector3,
         rotation: [-0.6, 0, 0] as Vector3,
     },
     drone: {
         path: "assets/models/drone.obj",
+        texturePath: "assets/models/drone.png",
         scale: [1, 1, 1] as Vector3,
         rotation: [0, 0, 0] as Vector3,
     },
     vikingRoom: {
         path: "assets/models/viking-room.obj",
+        texturePath: "",
         scale: [0.1, 0.1, 0.1] as Vector3,
         rotation: [0.4, -3.2, 0] as Vector3,
     },
@@ -105,7 +120,7 @@ class App {
             [0, 0, 5],
             MODEL_CATALOG[this._currentModelKey].scale,
             MODEL_CATALOG[this._currentModelKey].rotation,
-            await this._loadModel(MODEL_CATALOG[this._currentModelKey].path),
+            await this._loadModel(MODEL_CATALOG[this._currentModelKey]),
         );
 
         this._renderer.setClearColor(CLEAR_COLOR);
@@ -136,10 +151,10 @@ class App {
     private _render(): void {
         this._renderer.startDrawing(this._camera);
 
-        if (this._entity?.objData) {
+        if (this._entity) {
             this._renderer.draw(
-                this._entity.objData.vertices,
-                this._entity.objData.faces,
+                this._entity.model.objData.vertices,
+                this._entity.model.objData.faces,
                 this._entity.getModelTransform(),
             );
         }
@@ -153,13 +168,44 @@ class App {
         this._previousFrameTime = currentTime;
     }
 
-    private async _loadModel(path: string): Promise<ObjData> {
-        const response = await fetch(path);
-        const obj = await response.text();
+    private async _loadModel(metadata: ModelMetadata): Promise<Model> {
+        const imageLoadPromise = new Promise<ImageData>(async (resolve, reject) => {
+            try {
+                const response = await fetch(metadata.texturePath);
+                const blob = await response.blob();
+                const bitmap = await createImageBitmap(blob);
 
-        const objData = parseObj(obj);
+                const offscreenCanvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+                const ctx = offscreenCanvas.getContext("2d");
+                if (!ctx) {
+                    return reject("Failde to get offscreen canvas context");
+                }
 
-        return objData;
+                ctx.drawImage(bitmap, 0, 0);
+
+                resolve(ctx.getImageData(0, 0, offscreenCanvas.width, offscreenCanvas.height));
+            } catch (error) {
+                reject(error);
+            }
+        });
+
+        const objLoadPromise = new Promise<ObjData>(async (resolve, reject) => {
+            try {
+                const response = await fetch(metadata.path);
+                const obj = await response.text();
+                const objData = parseObj(obj);
+                resolve(objData);
+            } catch (error) {
+                reject(error);
+            }
+        });
+
+        const [image, objData] = await Promise.all([imageLoadPromise, objLoadPromise]);
+        
+        return {
+            objData,
+            texture: image,
+        }
     }
 
     // @Todo: the directional light direction controls are broken now, because the values come back normalized
@@ -245,7 +291,7 @@ class App {
                         [0, 0, 5],
                         MODEL_CATALOG[this._currentModelKey].scale,
                         MODEL_CATALOG[this._currentModelKey].rotation,
-                        await this._loadModel(MODEL_CATALOG[this._currentModelKey].path),
+                        await this._loadModel(MODEL_CATALOG[this._currentModelKey]),
                     );
                 });
             }
