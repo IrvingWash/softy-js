@@ -62,6 +62,7 @@ interface FrameBuffer {
 interface Face {
     vertexIndices: Vector3;
     uvIndices: Vector3;
+    colorIndex: number | null;
 }
 
 interface TriangleToRender {
@@ -130,9 +131,9 @@ export class Renderer {
     }
 
     public finishDrawing(): void {
-        // Just a simple painters algorithm for now. @Todo
+        // For textured we use the depth buffer, for other modes - painters algo.
         if (this._depthTesting && this._renderMode != RenderMode.Textured) {
-            this._trianglesToRender.sort((a, b) => b.positions[0][2] - a.positions[0][2]);
+            this._trianglesToRender.sort((a, b) => b.positions[0][3] - a.positions[0][3]);
         }
 
         for (const triangleToRender of this._trianglesToRender) {
@@ -242,6 +243,7 @@ export class Renderer {
     public draw(
         vertices: Vector3[],
         uvs: Vector2[],
+        colors: Vector3[],
         faces: Face[],
         texture: ImageData | null,
         modelTransform: Matrix4,
@@ -284,7 +286,7 @@ export class Renderer {
                     exhaustiveCheck(this._cullMode);
             }
 
-            let faceTint: Vector3 = tint;
+            let faceTint: Vector3 = face.colorIndex !== null ? colors[face.colorIndex] : tint; // @Todo: change behavior
             if (
                 this._directionalLight
                 && this._renderMode != RenderMode.Wireframe

@@ -1,6 +1,6 @@
 import { Canvas } from "../canvas";
 import { CullMode, RenderMode, Renderer } from "../renderer";
-import { ObjData, parseObj, UVFlip } from "../obj-parser";
+import { ObjData, parseObj, parseMtl, UVFlip, MtlData } from "../obj-parser";
 
 import {
     Vector2,
@@ -23,6 +23,7 @@ interface ModelMetadata {
     position: Vector3;
     scale: Vector3;
     rotation: Vector3;
+    mtlPath: string | null;
 }
 
 interface Model {
@@ -44,6 +45,7 @@ const MODEL_CATALOG: Record<string, ModelMetadata> = {
         position: [0, 0, 5],
         scale: [0.1, 0.1, 0.1],
         rotation: [0.4, -3.2, 0],
+        mtlPath: null,
     },
     f22: {
         path: "assets/models/f22.obj",
@@ -51,6 +53,7 @@ const MODEL_CATALOG: Record<string, ModelMetadata> = {
         position: [0, 0, 5],
         scale: [1, 1, 1],
         rotation: [-0.6, 0, 0],
+        mtlPath: null,
     },
     gundam: {
         path: "assets/models/gundam.obj",
@@ -58,6 +61,7 @@ const MODEL_CATALOG: Record<string, ModelMetadata> = {
         position: [0, 0, 5],
         scale: [1, 1, 1],
         rotation: [0, 0, 0],
+        mtlPath: "assets/models/gundam.mtl",
     },
 } as const;
 
@@ -219,6 +223,7 @@ export class ExampleApp {
             this._renderer.draw(
                 entity.model.objData.vertices,
                 entity.model.objData.uvs,
+                entity.model.objData.colors,
                 entity.model.objData.faces,
                 entity.model.texture,
                 entity.getModelTransform(),
@@ -236,6 +241,13 @@ export class ExampleApp {
     }
 
     private async _loadModel(metadata: ModelMetadata): Promise<Model> {
+        let mtlData: MtlData | null = null;
+        if (metadata.mtlPath) {
+            const response = await fetch(metadata.mtlPath);
+            const mtl = await response.text();
+            mtlData = parseMtl(mtl, false);
+        }
+
         const imageLoadPromise = new Promise<ImageData | null>(async (resolve, reject) => {
             if (!metadata.texturePath) {
                 resolve(null);
@@ -265,7 +277,7 @@ export class ExampleApp {
             try {
                 const response = await fetch(metadata.path);
                 const obj = await response.text();
-                const objData = parseObj(obj, UVFlip.Flipped);
+                const objData = parseObj(obj, mtlData, UVFlip.Flipped);
                 resolve(objData);
             } catch (error) {
                 reject(error);
