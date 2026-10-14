@@ -19,7 +19,7 @@ import { GUI } from "./gui";
 
 interface ModelMetadata {
     path: string;
-    texturePath: string;
+    texturePath: string | null;
     position: Vector3;
     scale: Vector3;
     rotation: Vector3;
@@ -51,6 +51,13 @@ const MODEL_CATALOG: Record<string, ModelMetadata> = {
         position: [0, 0, 5],
         scale: [1, 1, 1],
         rotation: [-0.6, 0, 0],
+    },
+    gundam: {
+        path: "assets/models/gundam.obj",
+        texturePath: null,
+        position: [0, 0, 5],
+        scale: [1, 1, 1],
+        rotation: [0, 0, 0],
     },
 } as const;
 
@@ -229,7 +236,12 @@ export class ExampleApp {
     }
 
     private async _loadModel(metadata: ModelMetadata): Promise<Model> {
-        const imageLoadPromise = new Promise<ImageData>(async (resolve, reject) => {
+        const imageLoadPromise = new Promise<ImageData | null>(async (resolve, reject) => {
+            if (!metadata.texturePath) {
+                resolve(null);
+                return;
+            }
+
             try {
                 const response = await fetch(metadata.texturePath);
                 const blob = await response.blob();

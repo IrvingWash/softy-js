@@ -160,9 +160,9 @@ export class Renderer {
                         a,
                         b,
                         c,
-                        triangleToRender.uvs[0],
-                        triangleToRender.uvs[1],
-                        triangleToRender.uvs[2],
+                        triangleToRender.uvs[0] ?? [0, 0],
+                        triangleToRender.uvs[1] ?? [0, 0],
+                        triangleToRender.uvs[2] ?? [0, 0],
                         triangleToRender.normal,
                         triangleToRender.texture ?? this._fallbackTexture,
                         triangleToRender.tint,
@@ -285,7 +285,12 @@ export class Renderer {
             }
 
             let faceTint: Vector3 = tint;
-            if (this._directionalLight && this._renderMode == RenderMode.Filled) { // We'll do this in drawTexel if it's textured
+            if (
+                this._directionalLight
+                && this._renderMode != RenderMode.Wireframe
+                && this._renderMode != RenderMode.Textured
+                && (this._renderMode === RenderMode.Filled || texture === null)
+            ) { // We'll do this in drawTexel if it's textured
                 const alignment = -dotProduct(faceNormal, this._directionalLight.normalizedDirection);
                 faceTint = calculateShadedColor(faceTint, this._directionalLight.color, alignment);
             }
@@ -688,9 +693,9 @@ function exhaustiveCheck(value: never): never {
 
 function calculateShadedColor(originalColor: Vector3, lightColor: Vector3, factor: number): Vector3 {
     if (
-        lightColor[0] == 255
-        && lightColor[1] == 255
-        && lightColor[2] == 255
+        lightColor[0] === 255
+        && lightColor[1] === 255
+        && lightColor[2] === 255
         && factor > 0.99
     ) {
         return originalColor;
