@@ -293,7 +293,7 @@ export class Renderer {
 
         const interpolatedReciprocalW = 1  / a[3] * alpha + 1  / b[3] * beta + 1  / c[3] * gamma;
 
-        if (interpolatedReciprocalW < this._depthBuffer[y * this._cachedCanvasSize[0] + x]) {
+        if (this._depthTesting && interpolatedReciprocalW < this._depthBuffer[y * this._cachedCanvasSize[0] + x]) {
             return;
         }
 
@@ -316,7 +316,9 @@ export class Renderer {
 
         this._drawPixel([x, y], color);
 
-        this._depthBuffer[y * this._cachedCanvasSize[0] + x] = interpolatedReciprocalW;
+        if (this._depthTesting) {
+            this._depthBuffer[y * this._cachedCanvasSize[0] + x] = interpolatedReciprocalW;
+        }
     }
 
     private _drawPixel(position: Vector2, color: Vector3): void {
