@@ -75,8 +75,10 @@ export class GUI {
             onDirectionalLightXDirectionChange,
             onDirectionalLightYDirectionChange,
             onDirectionalLightZDirectionChange,
-            "0",
+            "20px 0",
         );
+
+        this._createFooter();
     }
 
     public update(
@@ -477,118 +479,27 @@ export class GUI {
         }
     }
 
-    // private _createGui() { // This is a dumpster...
-    //     { // Renderer
-    //         { // Directional Light
-    //             const directionalLightWrapper = document.createElement("div");
-    //             directionalLightWrapper.style.display = "flex";
-    //             directionalLightWrapper.style.justifyContent = "space-between";
-    //             directionalLightWrapper.style.margin = menuItemWrapperMargin;
-    //             rendererWrapper.appendChild(directionalLightWrapper);
-    //
-    //             const directionalLightLabel = document.createElement("label");
-    //             directionalLightLabel.innerText = "Directional light";
-    //             directionalLightWrapper.appendChild(directionalLightLabel);
-    //
-    //             { // Color
-    //                 const colorInput = document.createElement("input");
-    //                 colorInput.type = "color";
-    //                 colorInput.value = "#" + (this._renderer.getDirectionalLight()?.color ?? SUN_COLOR)
-    //                     .map(c => Math.round(c).toString(16).padStart(2, "0"))
-    //                     .join("");
-    //                 directionalLightWrapper.appendChild(colorInput);
-    //
-    //                 colorInput.addEventListener("input", () => {
-    //                     const currentDirection = this._renderer.getDirectionalLight()?.direction ?? SUN_DIRECTION;
-    //
-    //                     this._renderer.setDirectionalLight(
-    //                         {
-    //                             direction: currentDirection,
-    //                             color: [
-    //                                 parseInt(colorInput.value.slice(1, 3), 16),
-    //                                 parseInt(colorInput.value.slice(3, 5), 16),
-    //                                 parseInt(colorInput.value.slice(5, 7), 16),
-    //                             ]
-    //                         }
-    //                     );
-    //                 });
-    //             }
-    //
-    //             { // Direction
-    //                 function createSlider(initialValue: number): HTMLInputElement {
-    //                     const slider = document.createElement("input");
-    //                     slider.value = String(initialValue);
-    //                     slider.type = "range";
-    //                     slider.min = "0";
-    //                     slider.max = "1";
-    //                     slider.step = "0.05";
-    //                     slider.style.width = "50px";
-    //
-    //                     return slider;
-    //                 }
-    //
-    //                 const currentDirection = this._renderer.getDirectionalLight()?.direction ?? SUN_DIRECTION;
-    //
-    //                 const xSlider = createSlider(currentDirection[0]);
-    //                 const ySlider = createSlider(currentDirection[1]);
-    //                 const zSlider = createSlider(currentDirection[2]);
-    //
-    //                 directionalLightWrapper.appendChild(xSlider);
-    //                 directionalLightWrapper.appendChild(ySlider);
-    //                 directionalLightWrapper.appendChild(zSlider);
-    //
-    //                 xSlider.addEventListener("input", () => {
-    //                     const currentDirectionalLight = this._renderer.getDirectionalLight() ?? {
-    //                         color: SUN_COLOR,
-    //                         direction: SUN_DIRECTION,
-    //                     }
-    //
-    //                     this._renderer.setDirectionalLight(
-    //                         {
-    //                             color: [...currentDirectionalLight.color],
-    //                             direction: [Number(xSlider.value), currentDirectionalLight.direction[1], currentDirectionalLight.direction[2]],
-    //                         }
-    //                     );
-    //                 });
-    //                 ySlider.addEventListener("input", () => {
-    //                     const currentDirectionalLight = this._renderer.getDirectionalLight() ?? {
-    //                         color: SUN_COLOR,
-    //                         direction: SUN_DIRECTION,
-    //                     }
-    //
-    //                     this._renderer.setDirectionalLight(
-    //                         {
-    //                             color: [...currentDirectionalLight.color],
-    //                             direction: [currentDirectionalLight.direction[0], Number(ySlider.value), currentDirectionalLight.direction[2]],
-    //                         }
-    //                     );
-    //                 });
-    //                 zSlider.addEventListener("input", () => {
-    //                     const currentDirectionalLight = this._renderer.getDirectionalLight() ?? {
-    //                         color: SUN_COLOR,
-    //                         direction: SUN_DIRECTION,
-    //                     }
-    //
-    //                     this._renderer.setDirectionalLight(
-    //                         {
-    //                             color: [...currentDirectionalLight.color],
-    //                             direction: [currentDirectionalLight.direction[0], currentDirectionalLight.direction[1], Number(zSlider.value)],
-    //                         }
-    //                     );
-    //                 });
-    //             }
-    //         }
-    //     }
-    //
-    //     { // FPS
-    //         const fpsDisplay = document.createElement("p");
-    //         fpsDisplay.innerText = "FPS: 0";
-    //
-    //         setInterval(() => fpsDisplay.innerText = `FPS: ${Math.round(1 / this._deltaTime)}`, 1000);
-    //
-    //         menuWrapper.appendChild(fpsDisplay);
-    //     }
-    // }
+    private _createFooter(): void {
+        const footerWrapper = document.createElement("div");
+        footerWrapper.style.display = "flex";
+        footerWrapper.style.flexDirection = "column";
+        footerWrapper.style.justifyContent = "space-between";
+        footerWrapper.style.fontSize = "14px";
+
+        this._menuWrapper.appendChild(footerWrapper);
+
+        const aboutDisplay = document.createElement("p");
+        aboutDisplay.innerText = "SoftyJS - ";
+
+        footerWrapper.appendChild(aboutDisplay);
+
+        const repoLink = document.createElement("a");
+        repoLink.href = "https://github.com/IrvingWash/softy-js";
+        repoLink.target = "_blank";
+        repoLink.innerText = "github";
+
+        aboutDisplay.appendChild(repoLink);
+    }
 }
 
 function cssHexToVector3Color(hex: string): Vector3 {
