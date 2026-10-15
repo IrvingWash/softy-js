@@ -7,7 +7,7 @@ The port, as the original project, is written from scratch. It doesn't have any 
 The prorjects, both this port and the original, are written by hand, without LLM assistance, because this is a educational endeavor.
 I wanted to learn how 3D rendering works under the hood. Though, the algorithms here are far worse than used by GPU driver developers, the project still provides a nice enough API and can render recognizible geometry.
 
-[Showcase](./showcas/softyjs.mp4)
+![Showcase](./showcas/softyjs.mp4)
 
 Current speed, when rendering a textured mesh, is 12000 triangles per 20FPS at Full HD resolution.<br>
 The speed could be further improved by caching some computations and using workers for multithreading, but that is out of scope of this project. For me, having very easily readable code here is more important.
