@@ -1,19 +1,47 @@
 import { Canvas } from '../canvas';
 import { Renderer } from '../renderer';
-import { ObjData, parseObj, UVFlip } from "../obj-parser";
+import { MtlData, ObjData, parseMtl, parseObj, UVFlip } from "../obj-parser";
 
 import { Camera } from "./camera";
-import { Entity, Player } from "./entities";
+import { Entity, Player, Rocket } from "./entities";
 import { Vector3 } from '../math';
 
 const SECONDS_IN_MILLISECOND = 1 / 1000;
 
-const LEVEL_1_METADATA = {
+interface LevelMetadata {
+    backgroundColor: Vector3;
+    sunColor: Vector3;
+    sunDirection: Vector3;
+    cameraPosition: Vector3;
+    modelPaths: [
+        {
+            obj: "assets/models/f22.obj",
+            mtl: null,
+        },
+        {
+            obj: "assets/models/rocket.obj",
+            mtl: "assets/models/rocket.mtl"
+        }
+    ],
+    texturePaths: string[];
+    entities: [new (...args: any[]) => Entity],
+}
+
+const LEVEL_1_METADATA: LevelMetadata = {
     backgroundColor: [0, 0, 255] as Vector3,
     sunColor: [255, 255, 255] as Vector3,
     sunDirection: [0, 0, 1] as Vector3,
     cameraPosition: [0, 0, -10] as Vector3,
-    modelPaths: ["assets/models/f22.obj", "assets/models/rocket.obj"],
+    modelPaths: [
+        {
+            obj: "assets/models/f22.obj",
+            mtl: null,
+        },
+        {
+            obj: "assets/models/rocket.obj",
+            mtl: "assets/models/rocket.mtl"
+        }
+    ],
     texturePaths: ["assets/models/f22.png"],
     entities: [Player],
 } as const;
@@ -123,15 +151,24 @@ export class ExampleGame {
         }
 
         const modelLoadingPromises: Promise<void>[] = [];
-        for (const path of LEVEL_1_METADATA.modelPaths) {
+        for (const { obj: objPath, mtl: mtlPath } of LEVEL_1_METADATA.modelPaths) {
             modelLoadingPromises.push(new Promise(async (resolve, reject) => {
+                let mtlData: MtlData | null = null;
                 try {
-                    const response = await fetch(path);
+                    if (mtlPath) {
+                        const response = await fetch(mtlPath);
+                        const text = await response.text();
+
+                        mtlData = parseMtl(text, false);
+                        console.log(mtlData);
+                    }
+
+                    const response = await fetch(objPath);
                     const text = await response.text();
 
-                    const objData = parseObj(text, null, UVFlip.Flipped);
+                    const objData = parseObj(text, mtlData, UVFlip.Flipped);
 
-                    this._modelsByPath.set(path, objData);
+                    this._modelsByPath.set(objPath, objData);
 
                     resolve();
                 } catch (error) {

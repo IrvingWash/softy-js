@@ -121,10 +121,9 @@ export class Player extends Entity {
 
 export class Rocket extends Entity {
     public override rotation: Vector3 = [0, degreesToRadians(-90), 0];
-    public override scale: Vector3 = [0.05, 0.05, 0.05];
+    public override scale: Vector3 = [0.03, 0.03, 0.03];
 
     public override modelPath: string = "assets/models/rocket.obj";
-    public override tint: Vector3 = [55, 55, 55];
 
     private _speed: number = 10;
 
