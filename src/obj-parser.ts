@@ -29,7 +29,7 @@ const UV_PREFIX = "vt ";
 const USEMTL_PREFIX = "usemtl ";
 const FACE_PREFIX = "f ";
 
-export async function parseObj(content: string, mtlData: MtlData | null, uvFlip: UVFlip): Promise<ObjData> {
+export function parseObj(content: string, mtlData: MtlData | null, uvFlip: UVFlip): ObjData {
     const objData: ObjData = {
         vertices: [],
         normals: [],
@@ -105,8 +105,6 @@ export async function parseObj(content: string, mtlData: MtlData | null, uvFlip:
             });
         }
     }
-
-    console.log(objData.colors);
 
     return objData;
 }
