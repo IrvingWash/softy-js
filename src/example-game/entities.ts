@@ -131,10 +131,14 @@ export class Player extends Entity {
     public hp: number = 3;
     public  isAlive: boolean = true;
 
-    private _speed: number = 2;
+    private _speed: number = 5;
     private _velocity: Vector2 = [0, 0];
     private _maxRoll: number = degreesToRadians(45);
     private _maxPitch: number = degreesToRadians(10);
+
+    private _hiddenModel: ObjData | null = null;
+    private _blinkInterval: number | null = null;
+    private _stopBlinkingTimeout: number | null = null;
 
     protected override _onStart(): void {
         window.addEventListener("keydown", this._onKeyDown);
@@ -173,11 +177,42 @@ export class Player extends Entity {
     }
 
     protected override _onCollision(other: Entity): void {
+        if (this._blinkInterval !== null) {
+            // Invincible
+            return;
+        }
+
         if (
-            other instanceof Enemy ||
-            other instanceof Rocket && other.initiator !== RocketInititator.Player
+            (other instanceof Enemy
+            || other instanceof Rocket && other.initiator !== RocketInititator.Player)
         ) {
             this.hp -= 1;
+
+            this._blinkInterval = setInterval(() => {
+                if (!this.model) {
+                    this.model = this._hiddenModel;
+                    this._hiddenModel = null;
+                } else {
+                    this._hiddenModel = this.model;
+                    this.model = null;
+                }
+            }, 100);
+
+            this._stopBlinkingTimeout = setTimeout(
+                () => {
+                    if (this._blinkInterval) {
+                        clearInterval(this._blinkInterval);
+                        this._blinkInterval = null;
+                    }
+                    if (!this.model) {
+                        this.model = this._hiddenModel;
+                        this._hiddenModel = null;
+                    } 
+
+                    this._stopBlinkingTimeout = null;
+                },
+                1000,
+            );
         }
 
         if (this.hp === 0) {
@@ -199,6 +234,16 @@ export class Player extends Entity {
 
         for (const spawner of enemySpawners) {
             spawner.stopSpawning();
+        }
+
+        if (this._blinkInterval) {
+            clearInterval(this._blinkInterval);
+            this._blinkInterval = null;
+        }
+
+        if (this._stopBlinkingTimeout) {
+            clearTimeout(this._stopBlinkingTimeout);
+            this._stopBlinkingTimeout = null;
         }
     }
 
@@ -310,9 +355,12 @@ export class Enemy extends Entity {
     }
 
     protected _onCollision(other: Entity): void {
-        if (other instanceof Rocket && other.initiator !== RocketInititator.Enemy) {
-            this._callbacks.destroyEntity(this);
+        if (
+            other instanceof Rocket && other.initiator !== RocketInititator.Enemy
+            || other instanceof Player
+        ) {
             this._killedByPlayer = true;
+            this._callbacks.destroyEntity(this);
         }
     }
 

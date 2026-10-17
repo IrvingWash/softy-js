@@ -108,7 +108,7 @@ export class ExampleGame {
     private _update(): void {
         for (const entity of this._entitiesToStart) {
             this._startEntity(entity);
-            this._activeEntities.push(...this._entitiesToStart);
+            this._activeEntities.push(entity);
         }
         this._entitiesToStart = [];
 
@@ -122,6 +122,10 @@ export class ExampleGame {
 
         for (const entity of this._activeEntities) {
             entity.update(this._deltaTime);
+
+            if (entity instanceof Player) {
+                this._gui.updateHp(entity.hp);
+            }
         }
 
         if (this._score >= 5 && !this._warpMode)  {
