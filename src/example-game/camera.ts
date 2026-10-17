@@ -16,7 +16,7 @@ export class Camera {
         position: Vector3 = [0, 0, 0],
         fov: number = degreesToRadians(60),
         target: Vector3 =  [0, 0, 0],
-        distance: number =  -10,
+        distance: number =  0,
         zNear: number = 0.1,
         zFar: number = 100,
         yaw: number = 0,

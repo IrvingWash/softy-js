@@ -280,6 +280,10 @@ export function calculateFaceNormal(a: Vector3, b: Vector3, c: Vector3): Vector3
     return normal;
 }
 
+export function scaleVector2(v: Vector2, s: number): Vector2 {
+    return [v[0] * s, v[1] * s];
+}
+
 export function scaleVector3(v: Vector3, s: number): Vector3 {
     return [v[0] * s, v[1] * s, v[2] * s];
 }

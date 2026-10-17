@@ -23,7 +23,7 @@ export class ExampleGame {
         this._canvas = Canvas.createFullscreen();
         this._renderer = new Renderer(this._canvas);
 
-        this._camera = new Camera();
+        this._camera = new Camera([0, 0, -10]);
     }
 
     public static async init(): Promise<ExampleGame> {
@@ -46,13 +46,14 @@ export class ExampleGame {
     }
 
     private _update(): void {
-        this._camera.update(
-            this._entities.find((entity) => entity instanceof Player)?.position ?? [0, 0, 0]
-        );
+        this._camera.update([0, 0, 0]);
+
+        for (const entity of this._entities) {
+            entity.update(this._deltaTime);
+        }
     }
 
     private _render(): void {
-        debugger;
         this._renderer.startDrawing(this._camera);
 
         for (const entity of this._entities) {
@@ -163,5 +164,9 @@ export class ExampleGame {
         }
 
         await Promise.all([...modelLoadingPromises, ...textureLoadingPromises]);
+
+        for (const entity of this._entities) {
+            entity.start();
+        }
     }
 }
