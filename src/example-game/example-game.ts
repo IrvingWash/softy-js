@@ -3,7 +3,7 @@ import { Renderer } from '../renderer';
 import { MtlData, ObjData, parseMtl, parseObj, UVFlip } from "../obj-parser";
 
 import { Camera } from "./camera";
-import { Entity, Player, Rocket } from "./entities";
+import { EntityCallbacks, Entity, Player } from "./entities";
 import { Vector3 } from '../math';
 
 const SECONDS_IN_MILLISECOND = 1 / 1000;
@@ -24,7 +24,7 @@ interface LevelMetadata {
         }
     ],
     texturePaths: string[];
-    entities: [new (...args: any[]) => Entity],
+    entities: [new (callbacks: EntityCallbacks) => Entity],
 }
 
 const LEVEL_1_METADATA: LevelMetadata = {
@@ -147,7 +147,7 @@ export class ExampleGame {
         this._camera.position = LEVEL_1_METADATA.cameraPosition;
 
         for (const entityConstructor of LEVEL_1_METADATA.entities) {
-            this._spawnEntity(new entityConstructor(this._spawnEntity));
+            this._spawnEntity(new entityConstructor({ spawnEntity: this._spawnEntity }));
         }
 
         const modelLoadingPromises: Promise<void>[] = [];

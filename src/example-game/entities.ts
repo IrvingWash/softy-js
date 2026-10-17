@@ -15,7 +15,9 @@ import {
     Vector3,
 } from "../math";
 
-type SpawnEntity = (entity: Entity) => void;
+export interface EntityCallbacks {
+    spawnEntity: (entity: Entity) => void;
+}
 
 export abstract class Entity {
     public position: Vector3 = [0, 0, 0];
@@ -28,10 +30,10 @@ export abstract class Entity {
     public modelPath: string | null = null;
     public texturePath: string | null = null;
 
-    protected _spawnEntity: SpawnEntity;
+    protected _callbacks: EntityCallbacks;
 
-    public constructor(spawnEntity: SpawnEntity) {
-        this._spawnEntity = spawnEntity;
+    public constructor(callbacks: EntityCallbacks) {
+        this._callbacks = callbacks;
     }
 
     public abstract start(): void;
@@ -143,12 +145,16 @@ export class Player extends Entity {
     }
 
     private _shootRocket(): void {
-        const rocket = new Rocket(this._spawnEntity);
+        const rocket = new Rocket(this._callbacks);
 
         // -0.15 so the rocket spawns a little bit below
         rocket.position = [this.position[0], this.position[1] - 0.15, this.position[2]];
 
-        this._spawnEntity(rocket);
+        this._callbacks.spawnEntity(rocket);
+    }
+
+    private _collideWithPlaygroundBorders(): void {
+        // @Todo
     }
 }
 
