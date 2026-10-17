@@ -102,6 +102,24 @@ export abstract class Entity {
     protected _onCollision?(other: Entity): void;
 }
 
+export class Explosion extends Entity {
+    public override rotation: Vector3 = [degreesToRadians(-90), 0, 0];
+    public override scale: Vector3 = [0.01, 0.01, 0.01];
+
+    public override modelPath = "assets/models/plane.obj";
+    public override texturePath = "assets/models/explosion.png";
+
+    protected override _onStart(): void {
+        setTimeout(() => this._callbacks.destroyEntity(this), 200);
+    }
+
+    public override _onUpdate(deltaTime: number): void {
+        this.scale[0] += 10 * deltaTime;
+        this.scale[1] += 10 * deltaTime;
+        this.scale[2] += 10 * deltaTime;
+    }
+}
+
 export class Player extends Entity {
     public override name: string = "Player";
 
@@ -110,6 +128,7 @@ export class Player extends Entity {
     public override modelPath = "assets/models/f22.obj";
     public override texturePath = "assets/models/f22.png";
 
+    public hp: number = 3;
     public  isAlive: boolean = true;
 
     private _speed: number = 2;
@@ -158,15 +177,29 @@ export class Player extends Entity {
             other instanceof Enemy ||
             other instanceof Rocket && other.initiator !== RocketInititator.Player
         ) {
-            this.isAlive = false;
+            this.hp -= 1;
+        }
 
-            this._disableCondrols();
-            this._velocity = [0, 0];
+        if (this.hp === 0) {
+            this._callbacks.destroyEntity(this);
         }
     }
 
     protected override _onDestroy(): void {
+        this.isAlive = false;
+
         this._disableCondrols();
+        this._velocity = [0, 0];
+
+        const explosion = new Explosion(this._callbacks);
+        explosion.position = this.position;
+        this._callbacks.spawnEntity(explosion);
+
+        const enemySpawners = this._callbacks.findEntities((entity: Entity): entity is EnemySpawner => entity instanceof EnemySpawner);
+
+        for (const spawner of enemySpawners) {
+            spawner.stopSpawning();
+        }
     }
 
     private _disableCondrols(): void {
@@ -290,6 +323,10 @@ export class Enemy extends Entity {
 
         if (this._killedByPlayer) {
             this._callbacks.incrementScore();
+
+            const explosion = new Explosion(this._callbacks);
+            explosion.position = this.position;
+            this._callbacks.spawnEntity(explosion);
         }
     }
 
@@ -354,24 +391,44 @@ export class Rocket extends Entity {
 
 export class EnemySpawner extends Entity {
     private _intervalId: number | null = null;
+    private _spawnSpeed: number = 2000;
+
+    public setWarpMode(): void {
+        this._spawnSpeed = 500;
+
+        if (this._intervalId) {
+            clearInterval(this._intervalId);
+        }
+
+        this._startSpawning();
+    }
+
+    public stopSpawning(): void {
+        if (this._intervalId) {
+            clearInterval(this._intervalId);
+            this._intervalId = null;
+        }
+    }
 
     protected override _onStart(): void {
+        this._startSpawning();
+    }
+
+    protected override _onDestroy(): void {
+        this.stopSpawning();
+    }
+
+    private _startSpawning(): void {
         this._intervalId = setInterval(
             () => {
                 const enemy = new Enemy(this._callbacks);
                 enemy.position[0] = 10;
-                enemy.position[1] = Math.random() * 5;
+                enemy.position[1] = Math.random() * 5 * (Math.random() > 0.5 ? -1 : 1);
 
                 this._callbacks.spawnEntity(enemy);
             },
-            2000
+            this._spawnSpeed,
         );
-    }
-
-    protected override _onDestroy(): void {
-        if (this._intervalId) {
-            clearInterval(this._intervalId);
-        }
     }
 }
 

@@ -2,4 +2,4 @@ Gundam      - https://sketchfab.com/3d-models/low-poly-ms-gundam-red-comet-kick-
 F22         - pikuma.com
 Viking Room - Unknown :(
 Jet         - Yash Dushettiwar (https://sketchfab.com/Yash-D)
-
+Explosion   - https://ansimuz.itch.io/explosion-animations-pack

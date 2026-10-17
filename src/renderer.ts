@@ -369,6 +369,7 @@ export class Renderer {
             texture.data[index + 1],
             texture.data[index + 2],
         ];
+        const texelAlpha = texture.data[index + 3];
         if (tint[0] != 255 || tint[1] != 255 || tint[2] != 255) {
             texelColor = divideVector3(multiplyVector3s(texelColor, tint), 255);
         }
@@ -378,7 +379,7 @@ export class Renderer {
             texelColor = calculateShadedColor(texelColor, this._directionalLight.color, alignment);
         }
 
-        this._drawPixel([x, y], texelColor);
+        this._drawPixel([x, y], [...texelColor, texelAlpha]);
 
         if (this._depthTesting) {
             this._depthBuffer[y * this._cachedCanvasSize[0] + x] = interpolatedReciprocalW;
@@ -416,10 +417,10 @@ export class Renderer {
             this._depthBuffer[index] = reciprocalW;
         }
 
-        this._drawPixel([x, y], color);
+        this._drawPixel([x, y], [...color, 255]);
     }
 
-    private _drawPixel(position: Vector2, color: Vector3): void {
+    private _drawPixel(position: Vector2, color: Vector4): void {
         const [width, height] = this._cachedCanvasSize;
 
         if (
@@ -429,7 +430,9 @@ export class Renderer {
             return;
         }
 
-        this._frameBuffer.colors[position[1] * width + position[0]] = toCanvasColorFormat(color);
+        if (color[3] !== 0) { // This is a very stupid way of doing blending (works only for completely transparent objects). But I'm to tired now to make this better
+            this._frameBuffer.colors[position[1] * width + position[0]] = toCanvasColorFormat([color[0], color[1], color[2]], color[3]);
+        }
     }
 
     private _drawLine(start: Vector2, end: Vector2, color: Vector3): void {
@@ -458,7 +461,7 @@ export class Renderer {
                 continue;
             }
 
-            this._drawPixel([Math.round(currentX), Math.round(currentY)], color);
+            this._drawPixel([Math.round(currentX), Math.round(currentY)], [...color, 255]);
 
             currentX += xStep;
             currentY += yStep;

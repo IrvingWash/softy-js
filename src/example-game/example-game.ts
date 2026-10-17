@@ -5,6 +5,7 @@ import { MtlData, ObjData, parseMtl, parseObj, UVFlip } from "../obj-parser";
 import { Camera } from "./camera";
 import { EntityCallbacks, Entity, Player, CollisionManager, EnemySpawner } from "./entities";
 import { Vector3 } from '../math';
+import { GUI } from './gui';
 
 const SECONDS_IN_MILLISECOND = 1 / 1000;
 
@@ -36,10 +37,15 @@ const LEVEL_1_METADATA: LevelMetadata = {
             obj: "assets/models/jet.obj",
             mtl: null,
         },
+        {
+            obj: "assets/models/plane.obj",
+            mtl: null,
+        },
     ],
     texturePaths: [
         "assets/models/f22.png",
         "assets/models/jet.png",
+        "assets/models/explosion.png",
     ],
     entities: [Player, EnemySpawner, CollisionManager],
 } as const;
@@ -47,6 +53,7 @@ const LEVEL_1_METADATA: LevelMetadata = {
 export class ExampleGame {
     private readonly _canvas: Canvas;
     private readonly _renderer: Renderer;
+    private readonly _gui: GUI;
 
     private _deltaTime: number = 0;
     private _previousFrameTime: number = 0;
@@ -65,6 +72,7 @@ export class ExampleGame {
     private constructor() {
         this._canvas = Canvas.createFullscreen();
         this._renderer = new Renderer(this._canvas);
+        this._gui = new GUI();
 
         this._camera = new Camera();
     }
@@ -116,16 +124,19 @@ export class ExampleGame {
             entity.update(this._deltaTime);
         }
 
-        if (this._score > 5 && !this._warpMode)  {
+        if (this._score >= 5 && !this._warpMode)  {
             this._warpMode = true;
 
             this._renderer.setRenderMode(RenderMode.Wireframe);
             this._renderer.setClearColor([150, 0, 0]);
+            this._gui.updateScore(this._score, this._warpMode);
 
             const player = this._activeEntities.find((entity) => entity instanceof Player);
             if (player) {
                 player.tint = [0, 0, 0];
             }
+
+            this._activeEntities.find((entity) => entity instanceof EnemySpawner)?.setWarpMode();
         }
     }
 
@@ -187,7 +198,10 @@ export class ExampleGame {
                 return this._activeEntities.filter(cb);
             },
             destroyEntity: this._destroyEntity,
-            incrementScore: () => this._score += 1,
+            incrementScore: () => {
+                this._score += 1;
+                this._gui.updateScore(this._score, this._warpMode);
+            }
         };
 
         for (const entityConstructor of LEVEL_1_METADATA.entities) {
