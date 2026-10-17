@@ -1,0 +1,2 @@
+- Fix frustum planes (currently it's a square - doesn't respect aspect ratio)
+- Respect rotations (maybe have several box colliders?)

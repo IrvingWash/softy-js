@@ -14,6 +14,7 @@ import {
     multiplyMatrix4AndVector3,
     multiplyMatrix4s,
     multiplyVector3s,
+    Plane,
     scaleVector2,
     scaleVector3,
     subtractVector3s,
@@ -78,6 +79,10 @@ export abstract class Entity {
         this._onDestroy?.();
     };
 
+    public onCollision(other: Entity): void {
+        this._onCollision?.(other);
+    }
+
     public calculateModelTransform(): Matrix4 {
         const translation = makeTranslationMatrix(this.position);
         const scale = makeScaleMatrix(this.scale);
@@ -93,6 +98,7 @@ export abstract class Entity {
     protected _onStart?(): void;
     protected _onUpdate?(deltaTime: number): void;
     protected _onDestroy?(): void;
+    protected _onCollision?(other: Entity): void;
 }
 
 export class Player extends Entity {
@@ -112,9 +118,7 @@ export class Player extends Entity {
 
     protected override _onStart(): void {
         window.addEventListener("keydown", this._onKeyDown);
-
         window.addEventListener("keyup", this._onKeyUp);
-
         window.addEventListener("keypress", this._onKeyPress);
 
         if (this.boxCollider) {
@@ -148,10 +152,23 @@ export class Player extends Entity {
         }
     }
 
-    private _onKeyPress = (event: KeyboardEvent): void => {
-        if (event.code === "KeyK") {
-            this._shootRocket();
+    protected override _onCollision(other: Entity): void {
+        if (other instanceof Enemy) {
+            this.isAlive = false;
+
+            this._disableCondrols();
+            this._velocity = [0, 0];
         }
+    }
+
+    protected override _onDestroy(): void {
+        this._disableCondrols();
+    }
+
+    private _disableCondrols(): void {
+        removeEventListener("keypress", this._onKeyPress);
+        removeEventListener("keydown", this._onKeyDown);
+        removeEventListener("keyup", this._onKeyUp);
     }
 
     private _shootRocket(): void {
@@ -164,6 +181,12 @@ export class Player extends Entity {
 
         this._callbacks.spawnEntity(rocket1);
         this._callbacks.spawnEntity(rocket2);
+    }
+
+    private _onKeyPress = (event: KeyboardEvent): void => {
+        if (event.code === "KeyK") {
+            this._shootRocket();
+        }
     }
 
     private _onKeyUp = (event: KeyboardEvent): void => {
@@ -194,7 +217,6 @@ export class Player extends Entity {
             this._velocity[0] = this._speed;
         }
     }
-
 }
 
 export class Enemy extends Entity {
@@ -216,23 +238,27 @@ export class Enemy extends Entity {
                 ),
             );
 
-            const a = multiplyVector3s(this.boxCollider.min, this.scale);
-            const b = multiplyVector3s(this.boxCollider.max, this.scale);
+            const scaledMin = multiplyVector3s(this.boxCollider.min, this.scale);
+            const scaledMax = multiplyVector3s(this.boxCollider.max, this.scale);
 
             const min: Vector3 = [Infinity, Infinity, Infinity];
             const max: Vector3 = [-Infinity, -Infinity, -Infinity];
 
-            for (const x of [a[0], b[0]])
-            for (const y of [a[1], b[1]])
-            for (const z of [a[2], b[2]]) {
-                const p = multiplyMatrix4AndVector3(rotation, [x, y, z]);
+            for (const x of [scaledMin[0], scaledMax[0]])
+            for (const y of [scaledMin[1], scaledMax[1]])
+            for (const z of [scaledMin[2], scaledMax[2]]) {
+                const rotated = multiplyMatrix4AndVector3(rotation, [x, y, z]);
                 for (let i = 0; i < 3; i++) {
-                    min[i] = Math.min(min[i], p[i]);
-                    max[i] = Math.max(max[i], p[i]);
+                    min[i] = Math.min(min[i], rotated[i]);
+                    max[i] = Math.max(max[i], rotated[i]);
                 }
             }
 
-            this.boxCollider = { min, max, delta: subtractVector3s(max, min) };
+            this.boxCollider = {
+                min,
+                max,
+                delta: subtractVector3s(max, min)
+            };
         }
     }
 
@@ -240,7 +266,11 @@ export class Enemy extends Entity {
         this.position[0] -= this._speed * deltaTime;
     }
 
-    protected override _onDestroy(): void {}
+    protected _onCollision(other: Entity): void {
+        if (other instanceof Rocket) {
+            this._callbacks.destroyEntity(this);
+        }
+    }
 }
 
 export class Rocket extends Entity {
@@ -265,6 +295,12 @@ export class Rocket extends Entity {
 
     protected override _onUpdate(deltaTime: number): void {
         this.position[0] += this._speed * deltaTime;
+    }
+
+    protected _onCollision(other: Entity): void {
+        if (other instanceof Enemy) {
+            this._callbacks.destroyEntity(this);
+        }
     }
 }
 
@@ -300,69 +336,39 @@ export class CollisionManager extends Entity {
 
     protected override _onUpdate(): void {
         const camera = this._callbacks.getCamera();
-        const frustumPlanes = camera.makeFrustumFlanes();
+        const frustumPlanes = camera.makeFrustumPlanes();
 
         if (this._player && this._player.isAlive) {
-            this._collideWithPlaygroundBorders(
+            collideWithFrustumPlanes(
                 this._player,
                 camera.position,
                 frustumPlanes,
             );
         }
 
-        const enemies = this._callbacks.findEntities((entity) => entity instanceof Enemy)
-        const rockets = this._callbacks.findEntities((entity) => entity instanceof Rocket)
+        const collidableEntities = this._callbacks.findEntities<Entity & { boxCollider: BoxCollider }>(
+            (entity): entity is Entity & { boxCollider: BoxCollider } => entity.boxCollider !== null
+        );
 
-        if (rockets.length === 0) {
-            for (const enemy of enemies) {
-                if (enemy.position[0] < -10) { // @Todo: hardcoded!
-                    this._callbacks.destroyEntity(enemy);
-                }
-            }
-        } else if (enemies.length === 0) {
-            for (const rocket of rockets) {
-                if (rocket.position[0] > 10) { // @Todo: hardcoded!
-                    this._callbacks.destroyEntity(rocket);
-                }
-            }
-        } else {
-            for (const rocket of rockets) {
-                if (rocket.position[0] > 10) { // @Todo: hardcoded!
-                    this._callbacks.destroyEntity(rocket);
-                    continue;
-                }
+        for (let i = 0; i < collidableEntities.length; i ++) {
+            const a = collidableEntities[i]!;
+            const aCollider: BoxCollider = {
+                min: addVector3s(a.boxCollider.min, a.position),
+                max: addVector3s(a.boxCollider.max, a.position),
+                delta: a.boxCollider.delta,
+            };
 
-                if (!rocket.boxCollider) {
-                    continue;
-                }
-
-                const rocketCollider: BoxCollider = {
-                    min: addVector3s(rocket.boxCollider.min, rocket.position),
-                    max: addVector3s(rocket.boxCollider.max, rocket.position),
-                    delta: rocket.boxCollider.delta,
+            for (let j = i + 1; j < collidableEntities.length; j++) {
+                const b = collidableEntities[j]!;
+                const bCollider: BoxCollider = {
+                    min: addVector3s(b.boxCollider.min, b.position),
+                    max: addVector3s(b.boxCollider.max, b.position),
+                    delta: b.boxCollider.delta,
                 };
 
-                for (const enemy of enemies) {
-                    if (enemy.position[0] < -10) { // @Todo: hardcoded!
-                        this._callbacks.destroyEntity(enemy);
-                        continue;
-                    }
-
-                    if (!enemy.boxCollider) {
-                        continue;
-                    }
-
-                    const enemyCollider: BoxCollider = {
-                        min: addVector3s(enemy.boxCollider.min, enemy.position),
-                        max: addVector3s(enemy.boxCollider.max, enemy.position),
-                        delta: enemy.boxCollider.delta,
-                    };
-
-                    if (checkAABBCollision(rocketCollider.min, rocketCollider.max, enemyCollider.min, enemyCollider.max)) {
-                        this._callbacks.destroyEntity(enemy);
-                        this._callbacks.destroyEntity(rocket);
-                        break;
-                    }
+                if (checkAABBCollision(aCollider, bCollider)) {
+                    a.onCollision(b);
+                    b.onCollision(a);
                 }
             }
         }
@@ -371,62 +377,60 @@ export class CollisionManager extends Entity {
     protected override _onDestroy(): void {
         this._player = null;
     }
+}
 
-    private _collideWithPlaygroundBorders(
-        entity: Entity,
-        cameraPosition: Vector3,
-        frustumPlanes: FrustumPlanes,
-    ): void {
-        if (!entity.boxCollider) {
-            return;
-        }
+function checkAABBCollision(aCollider: BoxCollider, bCollider: BoxCollider): boolean {
+    return (
+        aCollider.min[0] < bCollider.max[0]
+        && aCollider.max[0] > bCollider.min[0]
+        && aCollider.max[1] > bCollider.min[1]
+        && aCollider.min[1] < bCollider.max[1]
+    );
+}
 
-        // Offset to world position;
-        const scaledBoxCollider = {
-            max: addVector3s(entity.boxCollider.max, entity.position),
-            min: addVector3s(entity.boxCollider.min, entity.position),
-            delta: entity.boxCollider.delta,
-        };
+function collideWithFrustumPlanes(
+    entity: Entity,
+    cameraPosition: Vector3,
+    frustumPlanes: FrustumPlanes,
+): void {
+    if (!entity.boxCollider) {
+        return;
+    }
 
-        // Offset to camera position;
-        scaledBoxCollider.max = subtractVector3s(scaledBoxCollider.max, cameraPosition);
-        scaledBoxCollider.min = subtractVector3s(scaledBoxCollider.min, cameraPosition);
+    // Offset to world position;
+    const transformedBoxCollider = {
+        max: addVector3s(entity.boxCollider.max, entity.position),
+        min: addVector3s(entity.boxCollider.min, entity.position),
+        delta: entity.boxCollider.delta,
+    };
 
-        const distanceToTop = dotProduct(frustumPlanes.top.normal, scaledBoxCollider.max)
-            - dotProduct(frustumPlanes.top.normal, frustumPlanes.top.point);
-        if (distanceToTop <= 0) {
-            entity.position[1] = scaledBoxCollider.max[1] + distanceToTop - scaledBoxCollider.delta[1];
-            return;
-        }
+    // Offset to camera position;
+    transformedBoxCollider.max = subtractVector3s(transformedBoxCollider.max, cameraPosition);
+    transformedBoxCollider.min = subtractVector3s(transformedBoxCollider.min, cameraPosition);
 
-        const distanceToBottom  = dotProduct(frustumPlanes.bottom.normal, scaledBoxCollider.min)
-            - dotProduct(frustumPlanes.bottom.normal, frustumPlanes.bottom.point);
-        if (distanceToBottom <= 0) {
-            entity.position[1] = scaledBoxCollider.min[1] - distanceToBottom + scaledBoxCollider.delta[1];
-            return;
-        }
+    const distanceToTop = calculateDistanceToPlane(frustumPlanes.top, transformedBoxCollider.max);
+    if (distanceToTop <= 0) {
+        entity.position[1] = transformedBoxCollider.max[1] + distanceToTop - transformedBoxCollider.delta[1];
+    }
 
-        const distanceToLeft = dotProduct(frustumPlanes.left.normal, [...scaledBoxCollider.min])
-            - dotProduct(frustumPlanes.left.normal, frustumPlanes.left.point);
-        if (distanceToLeft <= 0) {
-            entity.position[0] = scaledBoxCollider.min[0] - distanceToLeft + scaledBoxCollider.delta[0];
-            return;
-        }
+    const distanceToBottom = calculateDistanceToPlane(frustumPlanes.bottom, transformedBoxCollider.min);
+    if (distanceToBottom <= 0) {
+        entity.position[1] = transformedBoxCollider.min[1] - distanceToBottom + transformedBoxCollider.delta[1];
+    }
 
-        const distanceToRight = dotProduct(frustumPlanes.right.normal, [...scaledBoxCollider.max])
-            - dotProduct(frustumPlanes.right.normal, frustumPlanes.right.point);
-        if (distanceToRight <= 0) {
-            entity.position[0] = scaledBoxCollider.max[0] + distanceToRight - scaledBoxCollider.delta[0] - 0.1;
-            return;
-        }
+    const distanceToLeft = calculateDistanceToPlane(frustumPlanes.left, transformedBoxCollider.min);
+    if (distanceToLeft <= 0) {
+        entity.position[0] = transformedBoxCollider.min[0] - distanceToLeft + transformedBoxCollider.delta[0];
+    }
+
+    const distanceToRight = calculateDistanceToPlane(frustumPlanes.right, transformedBoxCollider.max);
+    if (distanceToRight <= 0) {
+        entity.position[0] = transformedBoxCollider.max[0] + distanceToRight - transformedBoxCollider.delta[0];
     }
 }
 
-function checkAABBCollision(aMin: Vector3, aMax: Vector3, bMin: Vector3, bMax: Vector3): boolean {
-    return (
-        aMin[0] < bMax[0]
-        && aMax[0] > bMin[0]
-        && aMax[1] > bMin[1]
-        && aMin[1] < bMax[1]
-    );
+function calculateDistanceToPlane(plane: Plane, position: Vector3): number {
+    const distance = dotProduct(plane.normal, position) - dotProduct(plane.normal, plane.point);
+
+    return distance;
 }
