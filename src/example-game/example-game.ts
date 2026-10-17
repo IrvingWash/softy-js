@@ -160,7 +160,6 @@ export class ExampleGame {
                         const text = await response.text();
 
                         mtlData = parseMtl(text, false);
-                        console.log(mtlData);
                     }
 
                     const response = await fetch(objPath);

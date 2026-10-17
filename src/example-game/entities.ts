@@ -9,6 +9,7 @@ import {
     makeTranslationMatrix,
     Matrix4,
     multiplyMatrix4s,
+    multiplyVector2s,
     scaleVector2,
     Vector2,
     Vector3,
@@ -48,6 +49,27 @@ export abstract class Entity {
 
         return multiplyMatrix4s(translation, multiplyMatrix4s(rotation, scale));
     }
+
+    // It's stupid to to this here, instead of the moment of loading the model, but it reads better for the example I think
+    protected _makeCollider(): void {
+        const max: Vector2 = [-Infinity, -Infinity];
+        const min: Vector2 = [Infinity, Infinity];
+        for (const vertex of this.model!.vertices) {
+            if (vertex[0] > max[0] && vertex[1] > max[1]) {
+                max[0] = vertex[0];
+                max[1] = vertex[1];
+            } else if (vertex[0] < min[0] && vertex[1] < min[1]) {
+                min[0] = vertex[0];
+                min[1] = vertex[1];
+            }
+        }
+
+        const scaledMax = multiplyVector2s(max, [this.scale[0], this.scale[1]]);
+        const scaledMin = multiplyVector2s(min, [this.scale[0], this.scale[1]]);
+
+        console.log(scaledMax);
+        console.log(scaledMin);
+    }
 }
 
 export class Player extends Entity {
@@ -59,39 +81,35 @@ export class Player extends Entity {
 
     private _speed: number = 5;
     private _velocity: Vector2 = [0, 0];
+    private _maxRoll: number = degreesToRadians(45);
+    private _maxPitch: number = degreesToRadians(10);
 
     public start(): void {
         window.addEventListener("keydown", (event) => {
             if (event.code === "KeyW") {
                 this._velocity[1] = this._speed;
-                this.rotation[0] = degreesToRadians(45);
             }
 
             if (event.code === "KeyS") {
                 this._velocity[1] = -this._speed;
-                this.rotation[0] = degreesToRadians(-45);
             }
 
             if (event.code === "KeyA") {
                 this._velocity[0] = -this._speed;
-                this.rotation[2] = degreesToRadians(25);
             }
 
             if (event.code === "KeyD") {
                 this._velocity[0] = this._speed;
-                this.rotation[2] = degreesToRadians(-15);
             }
         });
 
         window.addEventListener("keyup", (event) => {
             if (event.code === "KeyW" || event.code === "KeyS") {
                 this._velocity[1] = 0;
-                this.rotation[0] = 0;
             }
 
             if (event.code === "KeyA" || event.code === "KeyD") {
                 this._velocity[0] = 0;
-                this.rotation[2] = 0;
             }
         });
 
@@ -100,13 +118,28 @@ export class Player extends Entity {
                 this._shootRocket();
             }
         });
+
+        this._makeCollider();
     }
 
     public update(deltaTime: number): void {
         const displacement = scaleVector2(this._velocity, deltaTime);
-
         this.position[0] += displacement[0];
         this.position[1] += displacement[1];
+
+        { // X Rotation
+            const targetRotationX = Math.sign(this._velocity[1]) * this._maxRoll;
+            const delta = targetRotationX - this.rotation[0];
+            const step = this._speed * deltaTime;
+            this.rotation[0] += Math.abs(delta) <= step ? delta : Math.sign(delta) * step;
+        }
+
+        { // Z rotation
+            const targetRotationZ = -Math.sign(this._velocity[0]) * this._maxPitch;
+            const delta = targetRotationZ - this.rotation[2];
+            const step = this._speed * deltaTime;
+            this.rotation[2] += Math.abs(delta) <= step ? delta : Math.sign(delta) * step;
+        }
     }
 
     private _shootRocket(): void {
@@ -127,7 +160,9 @@ export class Rocket extends Entity {
 
     private _speed: number = 10;
 
-    public start(): void {}
+    public start(): void {
+        this._makeCollider();
+    }
 
     public update(deltaTime: number): void {
         this.position[0] += this._speed * deltaTime;

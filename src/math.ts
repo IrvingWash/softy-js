@@ -52,6 +52,13 @@ export function makePerspectiveProjectionMatrix(
     return matrix;
 }
 
+export function multiplyVector2s(a: Vector2, b: Vector2): Vector2 {
+    return [
+        a[0] * b[0],
+        a[1] * b[1],
+    ];
+}
+
 export function multiplyVector3s(a: Vector3, b: Vector3): Vector3 {
     return [
         a[0] * b[0],
