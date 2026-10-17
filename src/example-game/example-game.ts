@@ -66,13 +66,14 @@ export class ExampleGame {
     private _entitiesToStart: Entity[] = [];
     private _entitiesToDestroy: Set<Entity> = new Set();
 
+    private _paused: boolean = true;
     private _score: number = 0;
     private _warpMode: boolean = false;
 
     private constructor() {
         this._canvas = Canvas.createFullscreen();
         this._renderer = new Renderer(this._canvas);
-        this._gui = new GUI();
+        this._gui = new GUI(() => this._paused = !this._paused);
 
         this._camera = new Camera();
     }
@@ -106,6 +107,10 @@ export class ExampleGame {
     }
 
     private _update(): void {
+        if (this._paused) {
+            return;
+        }
+
         for (const entity of this._entitiesToStart) {
             this._startEntity(entity);
             this._activeEntities.push(entity);
