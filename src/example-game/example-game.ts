@@ -1,5 +1,5 @@
 import { Canvas } from '../canvas';
-import { Renderer } from '../renderer';
+import { Renderer, RenderMode } from '../renderer';
 import { MtlData, ObjData, parseMtl, parseObj, UVFlip } from "../obj-parser";
 
 import { Camera } from "./camera";
@@ -19,10 +19,10 @@ interface LevelMetadata {
 }
 
 const LEVEL_1_METADATA: LevelMetadata = {
-    backgroundColor: [55, 55, 55] as Vector3,
-    sunColor: [255, 255, 255] as Vector3,
+    backgroundColor: [35, 35, 35] as Vector3,
+    sunColor: [255, 153, 255] as Vector3,
     sunDirection: [0, 0, 1] as Vector3,
-    cameraPosition: [0, 0, -10] as Vector3,
+    cameraPosition: [0, 0, -9] as Vector3,
     modelPaths: [
         {
             obj: "assets/models/f22.obj",
@@ -37,7 +37,10 @@ const LEVEL_1_METADATA: LevelMetadata = {
             mtl: null,
         },
     ],
-    texturePaths: ["assets/models/f22.png", "assets/models/jet.png"],
+    texturePaths: [
+        "assets/models/f22.png",
+        "assets/models/jet.png",
+    ],
     entities: [Player, EnemySpawner, CollisionManager],
 } as const;
 
@@ -54,7 +57,10 @@ export class ExampleGame {
 
     private _activeEntities: Entity[] = [];
     private _entitiesToStart: Entity[] = [];
-    private _entitiesToDestroy: Entity[] = [];
+    private _entitiesToDestroy: Set<Entity> = new Set();
+
+    private _score: number = 0;
+    private _warpMode: boolean = false;
 
     private constructor() {
         this._canvas = Canvas.createFullscreen();
@@ -102,12 +108,24 @@ export class ExampleGame {
             entity.destroy();
             this._activeEntities = this._activeEntities.filter((activeEntity) => entity != activeEntity); 
         }
-        this._entitiesToDestroy = [];
+        this._entitiesToDestroy.clear();
 
         this._camera.update([0, 0, 0]);
 
         for (const entity of this._activeEntities) {
             entity.update(this._deltaTime);
+        }
+
+        if (this._score > 5 && !this._warpMode)  {
+            this._warpMode = true;
+
+            this._renderer.setRenderMode(RenderMode.Wireframe);
+            this._renderer.setClearColor([150, 0, 0]);
+
+            const player = this._activeEntities.find((entity) => entity instanceof Player);
+            if (player) {
+                player.tint = [0, 0, 0];
+            }
         }
     }
 
@@ -134,7 +152,7 @@ export class ExampleGame {
     }
 
     private _calculateDeltaTime(currentTime: number): void {
-        this._deltaTime = (currentTime - this._previousFrameTime) * SECONDS_IN_MILLISECOND;
+        this._deltaTime = Math.min((currentTime - this._previousFrameTime) * SECONDS_IN_MILLISECOND, 0.032);
 
         this._previousFrameTime = currentTime;
     }
@@ -169,6 +187,7 @@ export class ExampleGame {
                 return this._activeEntities.filter(cb);
             },
             destroyEntity: this._destroyEntity,
+            incrementScore: () => this._score += 1,
         };
 
         for (const entityConstructor of LEVEL_1_METADATA.entities) {
@@ -236,6 +255,6 @@ export class ExampleGame {
     }
 
     private _destroyEntity = (entity: Entity): void => {
-        this._entitiesToDestroy.push(entity);
+        this._entitiesToDestroy.add(entity);
     }
 }

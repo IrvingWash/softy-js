@@ -30,6 +30,7 @@ export interface EntityCallbacks {
     findEntityByName: <T extends Entity>(name: string) => T | null;
     findEntities: <T extends Entity>(cb: (entity: Entity) => entity is T) => T[];
     getCamera: () => Camera;
+    incrementScore: () => void;
 }
 
 interface BoxCollider {
@@ -231,6 +232,7 @@ export class Enemy extends Entity {
 
     private _speed: number = 5;
     private _intervalId: number | null = null;
+    private _killedByPlayer: boolean = false;
 
     public override _onStart(): void {
         this.tint = [Math.random() * 255, Math.random() * 255, Math.random() * 255];
@@ -277,12 +279,17 @@ export class Enemy extends Entity {
     protected _onCollision(other: Entity): void {
         if (other instanceof Rocket && other.initiator !== RocketInititator.Enemy) {
             this._callbacks.destroyEntity(this);
+            this._killedByPlayer = true;
         }
     }
 
     protected _onDestroy(): void {
         if (this._intervalId) {
             clearInterval(this._intervalId);
+        }
+
+        if (this._killedByPlayer) {
+            this._callbacks.incrementScore();
         }
     }
 
