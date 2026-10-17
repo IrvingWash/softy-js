@@ -63,6 +63,14 @@ const MODEL_CATALOG: Record<string, ModelMetadata> = {
         rotation: [0, 0, 0],
         mtlPath: "assets/models/gundam.mtl",
     },
+    jet: {
+        path: "assets/models/jet.obj",
+        texturePath: "assets/models/jet.png",
+        position: [0, 0, 5],
+        scale: [1, 1, 1],
+        rotation: [0, 0, 0],
+        mtlPath: null,
+    },
 } as const;
 
 export class ExampleApp {

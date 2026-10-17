@@ -1,4 +1,9 @@
-import { degreesToRadians, Vector3 } from "../math";
+import {
+    degreesToRadians,
+    FrustumPlanes,
+    makeFrustumPlanes,
+    Vector3,
+} from "../math";
 
 export class Camera {
     public position: Vector3;
@@ -34,5 +39,9 @@ export class Camera {
 
     public update(target: Vector3): void {
         this.target = target;
+    }
+
+    public makeFrustumFlanes(): FrustumPlanes {
+        return makeFrustumPlanes(this.fov, this.zNear, this.zFar);
     }
 }

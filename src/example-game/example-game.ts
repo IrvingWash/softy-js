@@ -3,7 +3,7 @@ import { Renderer } from '../renderer';
 import { MtlData, ObjData, parseMtl, parseObj, UVFlip } from "../obj-parser";
 
 import { Camera } from "./camera";
-import { EntityCallbacks, Entity, Player } from "./entities";
+import { EntityCallbacks, Entity, Player, CollisionManager, EnemySpawner } from "./entities";
 import { Vector3 } from '../math';
 
 const SECONDS_IN_MILLISECOND = 1 / 1000;
@@ -13,18 +13,9 @@ interface LevelMetadata {
     sunColor: Vector3;
     sunDirection: Vector3;
     cameraPosition: Vector3;
-    modelPaths: [
-        {
-            obj: "assets/models/f22.obj",
-            mtl: null,
-        },
-        {
-            obj: "assets/models/rocket.obj",
-            mtl: "assets/models/rocket.mtl"
-        }
-    ],
+    modelPaths: { obj: string, mtl: string | null }[];
     texturePaths: string[];
-    entities: [new (callbacks: EntityCallbacks) => Entity],
+    entities: (new (callbacks: EntityCallbacks) => Entity)[],
 }
 
 const LEVEL_1_METADATA: LevelMetadata = {
@@ -40,10 +31,14 @@ const LEVEL_1_METADATA: LevelMetadata = {
         {
             obj: "assets/models/rocket.obj",
             mtl: "assets/models/rocket.mtl"
-        }
+        },
+        {
+            obj: "assets/models/jet.obj",
+            mtl: null,
+        },
     ],
-    texturePaths: ["assets/models/f22.png"],
-    entities: [Player],
+    texturePaths: ["assets/models/f22.png", "assets/models/jet.png"],
+    entities: [Player, EnemySpawner, CollisionManager],
 } as const;
 
 export class ExampleGame {
@@ -59,6 +54,7 @@ export class ExampleGame {
 
     private _activeEntities: Entity[] = [];
     private _entitiesToStart: Entity[] = [];
+    private _entitiesToDestroy: Entity[] = [];
 
     private constructor() {
         this._canvas = Canvas.createFullscreen();
@@ -89,9 +85,15 @@ export class ExampleGame {
     private _update(): void {
         for (const entity of this._entitiesToStart) {
             this._startEntity(entity);
+            this._activeEntities.push(...this._entitiesToStart);
         }
-        this._activeEntities.push(...this._entitiesToStart);
         this._entitiesToStart = [];
+
+        for (const entity of this._entitiesToDestroy) {
+            entity.destroy();
+            this._activeEntities = this._activeEntities.filter((activeEntity) => entity != activeEntity); 
+        }
+        this._entitiesToDestroy = [];
 
         this._camera.update([0, 0, 0]);
 
@@ -146,8 +148,22 @@ export class ExampleGame {
 
         this._camera.position = LEVEL_1_METADATA.cameraPosition;
 
+        const callbacks = {
+            spawnEntity: this._spawnEntity,
+            getCamera: () => this._camera,
+            findEntityByName: <T extends Entity>(name: string) => {
+                return this._activeEntities.find(
+                    (entity): entity is T => entity.name == name
+                ) ?? null;
+            },
+            findEntities: <T extends Entity>(cb: (entity: Entity) => entity is T) => {
+                return this._activeEntities.filter(cb);
+            },
+            destroyEntity: this._destroyEntity,
+        };
+
         for (const entityConstructor of LEVEL_1_METADATA.entities) {
-            this._spawnEntity(new entityConstructor({ spawnEntity: this._spawnEntity }));
+            this._spawnEntity(new entityConstructor(callbacks));
         }
 
         const modelLoadingPromises: Promise<void>[] = [];
@@ -208,5 +224,9 @@ export class ExampleGame {
 
     private _spawnEntity = (entity: Entity): void => {
         this._entitiesToStart.push(entity);
+    }
+
+    private _destroyEntity = (entity: Entity): void => {
+        this._entitiesToDestroy.push(entity);
     }
 }

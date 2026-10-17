@@ -1,7 +1,9 @@
 import { ObjData } from "../obj-parser";
 
 import {
+    addVector3s,
     degreesToRadians,
+    dotProduct,
     makeRotationAroundXMatrix,
     makeRotationAroundYMatrix,
     makeRotationAroundZMatrix,
@@ -9,17 +11,32 @@ import {
     makeTranslationMatrix,
     Matrix4,
     multiplyMatrix4s,
-    multiplyVector2s,
+    multiplyVector3s,
     scaleVector2,
+    subtractVector3s,
     Vector2,
     Vector3,
 } from "../math";
 
+import { Camera } from "./camera";
+
 export interface EntityCallbacks {
     spawnEntity: (entity: Entity) => void;
+    destroyEntity: (entity: Entity) => void;
+    findEntityByName: <T extends Entity>(name: string) => T | null;
+    findEntities: <T extends Entity>(cb: (entity: Entity) => entity is T) => T[];
+    getCamera: () => Camera;
+}
+
+interface BoxCollider {
+    max: Vector3;
+    min: Vector3;
+    delta: Vector3;
 }
 
 export abstract class Entity {
+    public name?: string;
+
     public position: Vector3 = [0, 0, 0];
     public scale: Vector3 = [1, 1, 1];
     public rotation: Vector3 = [0, 0, 0];
@@ -40,6 +57,8 @@ export abstract class Entity {
 
     public abstract update(deltaTime: number): void;
 
+    public abstract destroy(): void;
+
     public calculateModelTransform(): Matrix4 {
         const translation = makeTranslationMatrix(this.position);
         const scale = makeScaleMatrix(this.scale);
@@ -53,75 +72,60 @@ export abstract class Entity {
     }
 
     // It's stupid to to this here, instead of the moment of loading the model, but it reads better for the example I think
-    protected _makeCollider(): void {
-        const max: Vector2 = [-Infinity, -Infinity];
-        const min: Vector2 = [Infinity, Infinity];
+    protected _makeBoxCollider(): BoxCollider {
+        const max: Vector3 = [-Infinity, -Infinity, -Infinity];
+        const min: Vector3 = [Infinity, Infinity, Infinity];
         for (const vertex of this.model!.vertices) {
-            if (vertex[0] > max[0] && vertex[1] > max[1]) {
+            if (
+                vertex[0] > max[0]
+                && vertex[1] > max[1]
+                && vertex[2] > max[2]
+            ) {
                 max[0] = vertex[0];
                 max[1] = vertex[1];
-            } else if (vertex[0] < min[0] && vertex[1] < min[1]) {
+                max[2] = vertex[2];
+            } else if (
+                vertex[0] < min[0]
+                && vertex[1] < min[1]
+                && vertex[2] < min[2]
+            ) {
                 min[0] = vertex[0];
                 min[1] = vertex[1];
+                min[2] = vertex[2];
             }
         }
 
-        const scaledMax = multiplyVector2s(max, [this.scale[0], this.scale[1]]);
-        const scaledMin = multiplyVector2s(min, [this.scale[0], this.scale[1]]);
-
-        console.log(scaledMax);
-        console.log(scaledMin);
+        return {
+            max,
+            min,
+            delta: subtractVector3s(max, min),
+        };
     }
 }
 
 export class Player extends Entity {
-    public override position: Vector3 = [0, 0, 0];
+    public override name: string = "Player";
+
     public override scale: Vector3 = [0.5, 0.5, 0.5];
 
     public override modelPath = "assets/models/f22.obj";
     public override texturePath = "assets/models/f22.png";
+    boxCollider: BoxCollider | null = null;
 
+    public  isAlive: boolean = true;
     private _speed: number = 5;
     private _velocity: Vector2 = [0, 0];
     private _maxRoll: number = degreesToRadians(45);
     private _maxPitch: number = degreesToRadians(10);
 
     public start(): void {
-        window.addEventListener("keydown", (event) => {
-            if (event.code === "KeyW") {
-                this._velocity[1] = this._speed;
-            }
+        this.boxCollider = this._makeBoxCollider();
 
-            if (event.code === "KeyS") {
-                this._velocity[1] = -this._speed;
-            }
+        window.addEventListener("keydown", this._onKeyDown);
 
-            if (event.code === "KeyA") {
-                this._velocity[0] = -this._speed;
-            }
+        window.addEventListener("keyup", this._onKeyUp);
 
-            if (event.code === "KeyD") {
-                this._velocity[0] = this._speed;
-            }
-        });
-
-        window.addEventListener("keyup", (event) => {
-            if (event.code === "KeyW" || event.code === "KeyS") {
-                this._velocity[1] = 0;
-            }
-
-            if (event.code === "KeyA" || event.code === "KeyD") {
-                this._velocity[0] = 0;
-            }
-        });
-
-        window.addEventListener("keypress", (event) => {
-            if (event.code === "KeyK") {
-                this._shootRocket();
-            }
-        });
-
-        this._makeCollider();
+        window.addEventListener("keypress", this._onKeyPress);
     }
 
     public update(deltaTime: number): void {
@@ -144,6 +148,14 @@ export class Player extends Entity {
         }
     }
 
+    public destroy(): void {}
+
+    private _onKeyPress = (event: KeyboardEvent): void => {
+        if (event.code === "KeyK") {
+            this._shootRocket();
+        }
+    }
+
     private _shootRocket(): void {
         const rocket = new Rocket(this._callbacks);
 
@@ -153,9 +165,53 @@ export class Player extends Entity {
         this._callbacks.spawnEntity(rocket);
     }
 
-    private _collideWithPlaygroundBorders(): void {
-        // @Todo
+    private _onKeyUp = (event: KeyboardEvent): void => {
+        if (event.code === "KeyW" || event.code === "KeyS") {
+            this._velocity[1] = 0;
+        }
+
+        if (event.code === "KeyA" || event.code === "KeyD") {
+            this._velocity[0] = 0;
+        }
     }
+
+
+    private _onKeyDown = (event: KeyboardEvent): void => {
+        if (event.code === "KeyW") {
+            this._velocity[1] = this._speed;
+        }
+
+        if (event.code === "KeyS") {
+            this._velocity[1] = -this._speed;
+        }
+
+        if (event.code === "KeyA") {
+            this._velocity[0] = -this._speed;
+        }
+
+        if (event.code === "KeyD") {
+            this._velocity[0] = this._speed;
+        }
+    }
+
+}
+
+export class Enemy extends Entity {
+    public override scale: Vector3 = [0.25, 0.25, 0.25];
+    public override rotation: Vector3 = [0, degreesToRadians(-90), degreesToRadians(45)];
+
+    public override modelPath: string = "assets/models/jet.obj";
+    public override texturePath = "assets/models/jet.png";
+
+    private _speed: number = 5;
+
+    public override start(): void {}
+
+    public override update(deltaTime: number): void {
+        this.position[0] -= this._speed * deltaTime;
+    }
+
+    public destroy(): void {}
 }
 
 export class Rocket extends Entity {
@@ -166,11 +222,113 @@ export class Rocket extends Entity {
 
     private _speed: number = 10;
 
-    public start(): void {
-        this._makeCollider();
-    }
+    public start(): void {}
 
     public update(deltaTime: number): void {
         this.position[0] += this._speed * deltaTime;
+    }
+
+    public destroy(): void {}
+}
+
+export class EnemySpawner extends Entity {
+    private _intervalId: number | null = null;
+
+    public override start(): void {
+        this._intervalId = setInterval(
+            () => {
+                const enemy = new Enemy(this._callbacks);
+                enemy.position[0] = 10;
+                enemy.position[1] = Math.random() * 5;
+
+                this._callbacks.spawnEntity(enemy);
+            },
+            2000
+        );
+    }
+
+    public override update(): void {}
+
+    public override destroy(): void {
+        if (this._intervalId) {
+            clearInterval(this._intervalId);
+        }
+    }
+}
+
+export class CollisionManager extends Entity {
+    private _player: Player | null = null;
+
+    public start(): void {
+        this._player = this._callbacks.findEntityByName<Player>("Player");
+    }
+
+    public update(): void {
+        if (this._player && this._player.boxCollider && this._player.isAlive) {
+            this._collideWithPlaygroundBorders(this._player, this._player.boxCollider);
+        }
+
+        for (const enemy of this._callbacks.findEntities((entity) => entity instanceof Enemy)) {
+            if (enemy.position[0] < -10) { // @Todo: hardcoded!
+                this._callbacks.destroyEntity(enemy);
+            }
+        }
+
+        for (const rocket of this._callbacks.findEntities((entity) => entity instanceof Rocket)) {
+            if (rocket.position[0] > 10) { // @Todo: hardcoded!
+                this._callbacks.destroyEntity(rocket);
+            }
+        }
+    }
+
+    public destroy(): void {
+        this._player = null;
+    }
+
+    private _collideWithPlaygroundBorders(entity: Entity, boxCollider: BoxCollider): void {
+        const camera = this._callbacks.getCamera();
+        const frustumPlanes = camera.makeFrustumFlanes();
+
+        const scaledBoxCollider: BoxCollider = {
+            max: multiplyVector3s(boxCollider.max, entity.scale),
+            min: multiplyVector3s(boxCollider.min, entity.scale),
+            delta: multiplyVector3s(boxCollider.delta, entity.scale),
+        };
+
+        // Offset to world position;
+        scaledBoxCollider.max = addVector3s(scaledBoxCollider.max, entity.position);
+        scaledBoxCollider.min = addVector3s(scaledBoxCollider.min, entity.position);
+
+        // Offset to camera position;
+        scaledBoxCollider.max = subtractVector3s(scaledBoxCollider.max, camera.position);
+        scaledBoxCollider.min = subtractVector3s(scaledBoxCollider.min, camera.position);
+
+        const distanceToTop = dotProduct(frustumPlanes.top.normal, scaledBoxCollider.max)
+            - dotProduct(frustumPlanes.top.normal, frustumPlanes.top.point);
+        if (distanceToTop <= 0) {
+            entity.position[1] = scaledBoxCollider.max[1] + distanceToTop - scaledBoxCollider.delta[1];
+            return;
+        }
+
+        const distanceToBottom  = dotProduct(frustumPlanes.bottom.normal, scaledBoxCollider.min)
+            - dotProduct(frustumPlanes.bottom.normal, frustumPlanes.bottom.point);
+        if (distanceToBottom <= 0) {
+            entity.position[1] = scaledBoxCollider.min[1] - distanceToBottom + scaledBoxCollider.delta[1];
+            return;
+        }
+
+        const distanceToLeft = dotProduct(frustumPlanes.left.normal, [...scaledBoxCollider.min])
+            - dotProduct(frustumPlanes.left.normal, frustumPlanes.left.point);
+        if (distanceToLeft <= 0) {
+            entity.position[0] = scaledBoxCollider.min[0] - distanceToLeft + scaledBoxCollider.delta[0];
+            return;
+        }
+
+        const distanceToRight = dotProduct(frustumPlanes.right.normal, [...scaledBoxCollider.max])
+            - dotProduct(frustumPlanes.right.normal, frustumPlanes.right.point);
+        if (distanceToRight <= 0) {
+            entity.position[0] = scaledBoxCollider.max[0] + distanceToRight - scaledBoxCollider.delta[0] - 0.1;
+            return;
+        }
     }
 }

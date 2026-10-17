@@ -10,6 +10,60 @@ export interface BarycentricWeights {
     gamma: number;
 }
 
+export interface Plane {
+    point: Vector3;
+    normal: Vector3;
+}
+
+export interface FrustumPlanes {
+    left: Plane;
+    right: Plane;
+    top: Plane;
+    bottom: Plane;
+    near: Plane;
+    far: Plane;
+}
+
+export function makeFrustumPlanes(fov: number, zNear: number, zFar: number): FrustumPlanes {
+    const halfFov = fov / 2;
+    const cosHalfFov = Math.cos(halfFov);
+    const sinHalfFov = Math.sin(halfFov);
+
+    const left: Plane = {
+        point: makeEmptyVector3(),
+        normal: [cosHalfFov, 0, sinHalfFov],
+    };
+    const right: Plane = {
+        point: makeEmptyVector3(),
+        normal: [-cosHalfFov, 0, sinHalfFov]
+    };
+    const top: Plane = {
+        point: makeEmptyVector3(),
+        normal: [0, -cosHalfFov, sinHalfFov]
+    };
+    const bottom: Plane = {
+        point: makeEmptyVector3(),
+        normal: [0, cosHalfFov, sinHalfFov]
+    };
+    const near: Plane = {
+        point: [0, 0, zNear],
+        normal: [0, 0, 1],
+    };
+    const far: Plane = {
+        point: [0, 0, zFar],
+        normal: [ 0, 0, -1],
+    };
+
+    return {
+        left,
+        right,
+        top,
+        bottom,
+        near,
+        far,
+    };
+}
+
 export function makeMatrix4Identity(): Matrix4 {
     return [
         [1, 0, 0, 0],
@@ -216,6 +270,16 @@ export function makeEmptyVector3(): Vector3 {
 
 export function makeEmptyVector2(): Vector2 {
     return [0, 0];
+}
+
+export function addVector3s(a: Vector3, b: Vector3): Vector3 {
+    const result = makeEmptyVector3();
+
+    result[0] = a[0] + b[0];
+    result[1] = a[1] + b[1];
+    result[2] = a[2] + b[2];
+
+    return result;
 }
 
 export function subtractVector3s(a: Vector3, b: Vector3): Vector3 {
