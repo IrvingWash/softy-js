@@ -229,6 +229,8 @@ export class Enemy extends Entity {
     private _speed: number = 5;
 
     public override _onStart(): void {
+        this.tint = [Math.random() * 255, Math.random() * 255, Math.random() * 255];
+
         if (this.boxCollider) {
             const rotation = multiplyMatrix4s(
                 makeRotationAroundYMatrix(this.rotation[1]),
@@ -414,6 +416,7 @@ function checkAABBCollision(aCollider: BoxCollider, bCollider: BoxCollider): boo
     );
 }
 
+// @Todo: make a collideWithFrustumPlane, because the code is duplicated and it's stinky
 function collideWithFrustumPlanes(
     entity: Entity,
     cameraPosition: Vector3,
