@@ -153,7 +153,10 @@ export class Player extends Entity {
     }
 
     protected override _onCollision(other: Entity): void {
-        if (other instanceof Enemy) {
+        if (
+            other instanceof Enemy ||
+            other instanceof Rocket && other.initiator !== RocketInititator.Player
+        ) {
             this.isAlive = false;
 
             this._disableCondrols();
@@ -172,11 +175,11 @@ export class Player extends Entity {
     }
 
     private _shootRocket(): void {
-        const rocket1 = new Rocket(this._callbacks);
+        const rocket1 = new Rocket(RocketInititator.Player, this._callbacks);
         // -0.15 so the rocket spawns a little bit below
         rocket1.position = [this.position[0], this.position[1] - 0.15, this.position[2]];
 
-        const rocket2 = new Rocket(this._callbacks);
+        const rocket2 = new Rocket(RocketInititator.Player, this._callbacks);
         rocket2.position = [this.position[0], this.position[1] - 0.3, this.position[2]];
 
         this._callbacks.spawnEntity(rocket1);
@@ -227,11 +230,14 @@ export class Enemy extends Entity {
     public override texturePath = "assets/models/jet.png";
 
     private _speed: number = 5;
+    private _intervalId: number | null = null;
 
     public override _onStart(): void {
         this.tint = [Math.random() * 255, Math.random() * 255, Math.random() * 255];
 
-        if (this.boxCollider) {
+        this._intervalId = setInterval(this._shootRocket, 1000);
+
+        if (this.boxCollider) { // We rotated the entity, so the model is "mise en placed". Need to rotate the collider too
             const rotation = multiplyMatrix4s(
                 makeRotationAroundYMatrix(this.rotation[1]),
                 multiplyMatrix4s(
@@ -269,10 +275,28 @@ export class Enemy extends Entity {
     }
 
     protected _onCollision(other: Entity): void {
-        if (other instanceof Rocket) {
+        if (other instanceof Rocket && other.initiator !== RocketInititator.Enemy) {
             this._callbacks.destroyEntity(this);
         }
     }
+
+    protected _onDestroy(): void {
+        if (this._intervalId) {
+            clearInterval(this._intervalId);
+        }
+    }
+
+    private _shootRocket = (): void => {
+        const rocket = new Rocket(RocketInititator.Enemy, this._callbacks);
+        rocket.position = [this.position[0], this.position[1], this.position[2]];
+
+        this._callbacks.spawnEntity(rocket);
+    }
+}
+
+const enum RocketInititator {
+    Player = "Player",
+    Enemy = "Enemy",
 }
 
 export class Rocket extends Entity {
@@ -281,7 +305,19 @@ export class Rocket extends Entity {
 
     public override modelPath: string = "assets/models/rocket.obj";
 
+    public initiator: RocketInititator;
+
     private _speed: number = 10;
+
+    public constructor(initiator: RocketInititator, callbacks: EntityCallbacks) {
+        super(callbacks);
+
+        this.initiator = initiator;
+
+        if (this.initiator === RocketInititator.Enemy) {
+            this._speed *= -1;
+        }
+    }
 
     protected override _onStart(): void {
         if (this.boxCollider) {
@@ -300,7 +336,10 @@ export class Rocket extends Entity {
     }
 
     protected _onCollision(other: Entity): void {
-        if (other instanceof Enemy) {
+        if (
+            other instanceof Enemy && this.initiator !== RocketInititator.Enemy
+            || other instanceof Player && this.initiator !== RocketInititator.Player
+        ) {
             this._callbacks.destroyEntity(this);
         }
     }
@@ -362,15 +401,34 @@ export class CollisionManager extends Entity {
         }
 
         for (
-            const rocket of this._callbacks.findEntities(
-            (entity): entity is Rocket & { boxCollider: BoxCollider } => entity instanceof Rocket && entity.boxCollider !== null)
+            const playerRocket of this._callbacks.findEntities(
+                (entity): entity is Rocket & { boxCollider: BoxCollider } => entity instanceof Rocket
+                    && entity.boxCollider !== null
+                    && entity.initiator === RocketInititator.Player
+            )
         ) {
-            let translatedMin = addVector3s(rocket.boxCollider.min, rocket.position);
+            let translatedMax = addVector3s(playerRocket.boxCollider.max, playerRocket.position);
+            translatedMax = subtractVector3s(translatedMax, camera.position);
+
+            const distance = calculateDistanceToPlane(frustumPlanes.right, translatedMax);
+            if (distance < -playerRocket.boxCollider.delta[0]) {
+                this._callbacks.destroyEntity(playerRocket);
+            }
+        }
+
+        for (
+            const enemyRocket of this._callbacks.findEntities(
+                (entity): entity is Rocket & { boxCollider: BoxCollider } => entity instanceof Rocket
+                    && entity.boxCollider !== null
+                    && entity.initiator === RocketInititator.Enemy
+            )
+        ) {
+            let translatedMin = addVector3s(enemyRocket.boxCollider.min, enemyRocket.position);
             translatedMin = subtractVector3s(translatedMin, camera.position);
 
             const distance = calculateDistanceToPlane(frustumPlanes.left, translatedMin);
-            if (distance < -rocket.boxCollider.delta[0]) {
-                this._callbacks.destroyEntity(rocket);
+            if (distance < -enemyRocket.boxCollider.delta[0]) {
+                this._callbacks.destroyEntity(enemyRocket);
             }
         }
 
