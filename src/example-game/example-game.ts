@@ -1,13 +1,22 @@
 import { Canvas } from '../canvas';
 import { Renderer } from '../renderer';
-import { parseObj, UVFlip } from "../obj-parser";
+import { ObjData, parseObj, UVFlip } from "../obj-parser";
 
 import { Camera } from "./camera";
 import { Entity, Player } from "./entities";
 import { Vector3 } from '../math';
 
 const SECONDS_IN_MILLISECOND = 1 / 1000;
-const BACKGROUND_COLOR = [0, 0, 255] as Vector3;
+
+const LEVEL_1_METADATA = {
+    backgroundColor: [0, 0, 255] as Vector3,
+    sunColor: [255, 255, 255] as Vector3,
+    sunDirection: [0, 0, 1] as Vector3,
+    cameraPosition: [0, 0, -10] as Vector3,
+    modelPaths: ["assets/models/f22.obj", "assets/models/rocket.obj"],
+    texturePaths: ["assets/models/f22.png"],
+    entities: [Player],
+} as const;
 
 export class ExampleGame {
     private readonly _canvas: Canvas;
@@ -16,14 +25,18 @@ export class ExampleGame {
     private _deltaTime: number = 0;
     private _previousFrameTime: number = 0;
 
+    private _modelsByPath: Map<string, ObjData> = new Map();
+    private _texturesByPath: Map<string, ImageData> = new Map();
     private _camera: Camera;
-    private _entities: Entity[] = [];
+
+    private _activeEntities: Entity[] = [];
+    private _entitiesToStart: Entity[] = [];
 
     private constructor() {
         this._canvas = Canvas.createFullscreen();
         this._renderer = new Renderer(this._canvas);
 
-        this._camera = new Camera([0, 0, -10]);
+        this._camera = new Camera();
     }
 
     public static async init(): Promise<ExampleGame> {
@@ -46,9 +59,15 @@ export class ExampleGame {
     }
 
     private _update(): void {
+        for (const entity of this._entitiesToStart) {
+            this._startEntity(entity);
+        }
+        this._activeEntities.push(...this._entitiesToStart);
+        this._entitiesToStart = [];
+
         this._camera.update([0, 0, 0]);
 
-        for (const entity of this._entities) {
+        for (const entity of this._activeEntities) {
             entity.update(this._deltaTime);
         }
     }
@@ -56,7 +75,7 @@ export class ExampleGame {
     private _render(): void {
         this._renderer.startDrawing(this._camera);
 
-        for (const entity of this._entities) {
+        for (const entity of this._activeEntities) {
             if (!entity.model) {
                 continue;
             }
@@ -68,6 +87,7 @@ export class ExampleGame {
                 entity.model.faces,
                 entity.texture,
                 entity.calculateModelTransform(),
+                entity.tint,
             );
         }
 
@@ -80,42 +100,30 @@ export class ExampleGame {
         this._previousFrameTime = currentTime;
     }
 
+    private _startEntity(entity: Entity): void {
+        entity.model = this._modelsByPath.get(entity.modelPath ?? "") ?? null;
+        entity.texture = this._texturesByPath.get(entity.texturePath ?? "") ?? null;
+
+        entity.start();
+    }
+
     private async _loadLevel(): Promise<void> {
-        this._renderer.setClearColor(BACKGROUND_COLOR);
+        this._renderer.setClearColor(LEVEL_1_METADATA.backgroundColor);
 
         this._renderer.setDirectionalLight({
-            color: [255, 255, 255],
-            direction: [0, 0, 1],
+            color: LEVEL_1_METADATA.sunColor,
+            direction: LEVEL_1_METADATA.sunDirection,
             normalizedDirection: [0, 0, 0] as Vector3, // Normalized inside the call
         });
 
+        this._camera.position = LEVEL_1_METADATA.cameraPosition;
 
-        this._entities.push(new Player());
-
-        const modelPathToEntities: Map<string, Entity[]> = new Map();
-        const texturePathToEntities: Map<string, Entity[]> = new Map();
-        for (const entity of this._entities) {
-            if (entity.modelPath) {
-                const entitiesWithThisModelPath = modelPathToEntities.get(entity.modelPath);
-                if (entitiesWithThisModelPath) {
-                    entitiesWithThisModelPath.push(entity);
-                } else {
-                    modelPathToEntities.set(entity.modelPath, [entity]);
-                }
-            }
-
-            if (entity.texturePath) {
-                const entitiesWithThisTexturePath = texturePathToEntities.get(entity.texturePath);
-                if (entitiesWithThisTexturePath) {
-                    entitiesWithThisTexturePath.push(entity);
-                } else {
-                    texturePathToEntities.set(entity.texturePath, [entity]);
-                }
-            }
+        for (const entityConstructor of LEVEL_1_METADATA.entities) {
+            this._spawnEntity(new entityConstructor(this._spawnEntity));
         }
 
         const modelLoadingPromises: Promise<void>[] = [];
-        for (const [path, entities] of modelPathToEntities.entries()) {
+        for (const path of LEVEL_1_METADATA.modelPaths) {
             modelLoadingPromises.push(new Promise(async (resolve, reject) => {
                 try {
                     const response = await fetch(path);
@@ -123,9 +131,7 @@ export class ExampleGame {
 
                     const objData = parseObj(text, null, UVFlip.Flipped);
 
-                    for (const entity of entities) {
-                        entity.model = objData;
-                    }
+                    this._modelsByPath.set(path, objData);
 
                     resolve();
                 } catch (error) {
@@ -135,7 +141,7 @@ export class ExampleGame {
         }
 
         const textureLoadingPromises: Promise<void>[] = [];
-        for (const [path, entities] of texturePathToEntities.entries()) {
+        for (const path of LEVEL_1_METADATA.texturePaths) {
             textureLoadingPromises.push(new Promise(async (resolve, reject) => {
                 try {
                     const response = await fetch(path);
@@ -152,9 +158,7 @@ export class ExampleGame {
 
                     const imageData = ctx.getImageData(0, 0, offscreenCanvas.width, offscreenCanvas.height);
 
-                    for (const entity of entities) {
-                        entity.texture = imageData;
-                    }
+                    this._texturesByPath.set(path, imageData);
 
                     resolve();
                 } catch (error) {
@@ -164,9 +168,9 @@ export class ExampleGame {
         }
 
         await Promise.all([...modelLoadingPromises, ...textureLoadingPromises]);
+    }
 
-        for (const entity of this._entities) {
-            entity.start();
-        }
+    private _spawnEntity = (entity: Entity): void => {
+        this._entitiesToStart.push(entity);
     }
 }
