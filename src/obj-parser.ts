@@ -1,4 +1,4 @@
-import { Vector3, Vector2 } from "./math";
+import { Vector3, Vector2, subtractVector3s } from "./math";
 
 export interface ObjData {
     vertices: Vector3[];
@@ -6,6 +6,10 @@ export interface ObjData {
     uvs: Vector2[];
     faces: ObjFace[];
     colors: Vector3[];
+
+    max: Vector3;
+    min: Vector3;
+    delta: Vector3;
 }
 
 export interface ObjFace {
@@ -36,6 +40,9 @@ export function parseObj(content: string, mtlData: MtlData | null, uvFlip: UVFli
         uvs: [],
         faces: [],
         colors: [],
+        max: [0, 0, 0] as Vector3,
+        min: [0, 0, 0] as Vector3,
+        delta: [0, 0, 0] as Vector3,
     };
 
     const lines = content.split("\n");
@@ -106,6 +113,11 @@ export function parseObj(content: string, mtlData: MtlData | null, uvFlip: UVFli
         }
     }
 
+    const extremes = makeExtremes(objData.vertices);
+    objData.min = extremes.min;
+    objData.max = extremes.max;
+    objData.delta = extremes.delta;
+
     return objData;
 }
 
@@ -139,4 +151,36 @@ export function parseMtl(content: string, normalizedColors: boolean): MtlData {
     }
 
     return mtlData;
+}
+
+
+// It's a stupid name, but I don't know how this thing is called conventionally
+function makeExtremes(vertices: Vector3[]): { min: Vector3, max: Vector3, delta: Vector3 } {
+    const max: Vector3 = [-Infinity, -Infinity, -Infinity];
+    const min: Vector3 = [Infinity, Infinity, Infinity];
+    for (const vertex of vertices) {
+        if (
+            vertex[0] > max[0]
+            && vertex[1] > max[1]
+            && vertex[2] > max[2]
+        ) {
+            max[0] = vertex[0];
+            max[1] = vertex[1];
+            max[2] = vertex[2];
+        } else if (
+            vertex[0] < min[0]
+            && vertex[1] < min[1]
+            && vertex[2] < min[2]
+        ) {
+            min[0] = vertex[0];
+            min[1] = vertex[1];
+            min[2] = vertex[2];
+        }
+    }
+
+    return {
+        max,
+        min,
+        delta: subtractVector3s(max, min),
+    };
 }

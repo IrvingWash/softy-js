@@ -4,15 +4,18 @@ import {
     addVector3s,
     degreesToRadians,
     dotProduct,
+    FrustumPlanes,
     makeRotationAroundXMatrix,
     makeRotationAroundYMatrix,
     makeRotationAroundZMatrix,
     makeScaleMatrix,
     makeTranslationMatrix,
     Matrix4,
+    multiplyMatrix4AndVector3,
     multiplyMatrix4s,
     multiplyVector3s,
     scaleVector2,
+    scaleVector3,
     subtractVector3s,
     Vector2,
     Vector3,
@@ -47,17 +50,33 @@ export abstract class Entity {
     public modelPath: string | null = null;
     public texturePath: string | null = null;
 
+    public boxCollider: BoxCollider | null = null;
+
     protected _callbacks: EntityCallbacks;
 
     public constructor(callbacks: EntityCallbacks) {
         this._callbacks = callbacks;
     }
 
-    public abstract start(): void;
+    public start(): void {
+        if (this.model) {
+            this.boxCollider = {
+                max: [...this.model.max],
+                min: [...this.model.min],
+                delta: [...this.model.delta],
+            };
+        }
 
-    public abstract update(deltaTime: number): void;
+        this._onStart?.();
+    };
 
-    public abstract destroy(): void;
+    public update(deltaTime: number): void {
+        this._onUpdate?.(deltaTime);
+    };
+
+    public destroy(): void {
+        this._onDestroy?.();
+    };
 
     public calculateModelTransform(): Matrix4 {
         const translation = makeTranslationMatrix(this.position);
@@ -71,36 +90,9 @@ export abstract class Entity {
         return multiplyMatrix4s(translation, multiplyMatrix4s(rotation, scale));
     }
 
-    // It's stupid to to this here, instead of the moment of loading the model, but it reads better for the example I think
-    protected _makeBoxCollider(): BoxCollider {
-        const max: Vector3 = [-Infinity, -Infinity, -Infinity];
-        const min: Vector3 = [Infinity, Infinity, Infinity];
-        for (const vertex of this.model!.vertices) {
-            if (
-                vertex[0] > max[0]
-                && vertex[1] > max[1]
-                && vertex[2] > max[2]
-            ) {
-                max[0] = vertex[0];
-                max[1] = vertex[1];
-                max[2] = vertex[2];
-            } else if (
-                vertex[0] < min[0]
-                && vertex[1] < min[1]
-                && vertex[2] < min[2]
-            ) {
-                min[0] = vertex[0];
-                min[1] = vertex[1];
-                min[2] = vertex[2];
-            }
-        }
-
-        return {
-            max,
-            min,
-            delta: subtractVector3s(max, min),
-        };
-    }
+    protected _onStart?(): void;
+    protected _onUpdate?(deltaTime: number): void;
+    protected _onDestroy?(): void;
 }
 
 export class Player extends Entity {
@@ -110,25 +102,33 @@ export class Player extends Entity {
 
     public override modelPath = "assets/models/f22.obj";
     public override texturePath = "assets/models/f22.png";
-    boxCollider: BoxCollider | null = null;
 
     public  isAlive: boolean = true;
-    private _speed: number = 5;
+
+    private _speed: number = 2;
     private _velocity: Vector2 = [0, 0];
     private _maxRoll: number = degreesToRadians(45);
     private _maxPitch: number = degreesToRadians(10);
 
-    public start(): void {
-        this.boxCollider = this._makeBoxCollider();
-
+    protected override _onStart(): void {
         window.addEventListener("keydown", this._onKeyDown);
 
         window.addEventListener("keyup", this._onKeyUp);
 
         window.addEventListener("keypress", this._onKeyPress);
+
+        if (this.boxCollider) {
+            this.boxCollider = {
+                min: multiplyVector3s(this.boxCollider.min, this.scale),
+                max: multiplyVector3s(this.boxCollider.max, this.scale),
+                delta: this.boxCollider.delta,
+            };
+
+            this.boxCollider.delta = subtractVector3s(this.boxCollider.max, this.boxCollider.min)
+        }
     }
 
-    public update(deltaTime: number): void {
+    protected override _onUpdate(deltaTime: number): void {
         const displacement = scaleVector2(this._velocity, deltaTime);
         this.position[0] += displacement[0];
         this.position[1] += displacement[1];
@@ -148,8 +148,6 @@ export class Player extends Entity {
         }
     }
 
-    public destroy(): void {}
-
     private _onKeyPress = (event: KeyboardEvent): void => {
         if (event.code === "KeyK") {
             this._shootRocket();
@@ -157,12 +155,15 @@ export class Player extends Entity {
     }
 
     private _shootRocket(): void {
-        const rocket = new Rocket(this._callbacks);
-
+        const rocket1 = new Rocket(this._callbacks);
         // -0.15 so the rocket spawns a little bit below
-        rocket.position = [this.position[0], this.position[1] - 0.15, this.position[2]];
+        rocket1.position = [this.position[0], this.position[1] - 0.15, this.position[2]];
 
-        this._callbacks.spawnEntity(rocket);
+        const rocket2 = new Rocket(this._callbacks);
+        rocket2.position = [this.position[0], this.position[1] - 0.3, this.position[2]];
+
+        this._callbacks.spawnEntity(rocket1);
+        this._callbacks.spawnEntity(rocket2);
     }
 
     private _onKeyUp = (event: KeyboardEvent): void => {
@@ -205,13 +206,41 @@ export class Enemy extends Entity {
 
     private _speed: number = 5;
 
-    public override start(): void {}
+    public override _onStart(): void {
+        if (this.boxCollider) {
+            const rotation = multiplyMatrix4s(
+                makeRotationAroundYMatrix(this.rotation[1]),
+                multiplyMatrix4s(
+                    makeRotationAroundXMatrix(this.rotation[0]),
+                    makeRotationAroundZMatrix(this.rotation[2]),
+                ),
+            );
 
-    public override update(deltaTime: number): void {
+            const a = multiplyVector3s(this.boxCollider.min, this.scale);
+            const b = multiplyVector3s(this.boxCollider.max, this.scale);
+
+            const min: Vector3 = [Infinity, Infinity, Infinity];
+            const max: Vector3 = [-Infinity, -Infinity, -Infinity];
+
+            for (const x of [a[0], b[0]])
+            for (const y of [a[1], b[1]])
+            for (const z of [a[2], b[2]]) {
+                const p = multiplyMatrix4AndVector3(rotation, [x, y, z]);
+                for (let i = 0; i < 3; i++) {
+                    min[i] = Math.min(min[i], p[i]);
+                    max[i] = Math.max(max[i], p[i]);
+                }
+            }
+
+            this.boxCollider = { min, max, delta: subtractVector3s(max, min) };
+        }
+    }
+
+    protected override _onUpdate(deltaTime: number): void {
         this.position[0] -= this._speed * deltaTime;
     }
 
-    public destroy(): void {}
+    protected override _onDestroy(): void {}
 }
 
 export class Rocket extends Entity {
@@ -222,19 +251,27 @@ export class Rocket extends Entity {
 
     private _speed: number = 10;
 
-    public start(): void {}
+    protected override _onStart(): void {
+        if (this.boxCollider) {
+            this.boxCollider = {
+                min: multiplyVector3s(this.boxCollider.min, scaleVector3(this.scale, 2)),
+                max: multiplyVector3s(this.boxCollider.max, scaleVector3(this.scale, 2)),
+                delta: this.boxCollider.delta,
+            };
 
-    public update(deltaTime: number): void {
-        this.position[0] += this._speed * deltaTime;
+            this.boxCollider.delta = subtractVector3s(this.boxCollider.max, this.boxCollider.min)
+        }
     }
 
-    public destroy(): void {}
+    protected override _onUpdate(deltaTime: number): void {
+        this.position[0] += this._speed * deltaTime;
+    }
 }
 
 export class EnemySpawner extends Entity {
     private _intervalId: number | null = null;
 
-    public override start(): void {
+    protected override _onStart(): void {
         this._intervalId = setInterval(
             () => {
                 const enemy = new Enemy(this._callbacks);
@@ -247,9 +284,7 @@ export class EnemySpawner extends Entity {
         );
     }
 
-    public override update(): void {}
-
-    public override destroy(): void {
+    protected override _onDestroy(): void {
         if (this._intervalId) {
             clearInterval(this._intervalId);
         }
@@ -259,49 +294,103 @@ export class EnemySpawner extends Entity {
 export class CollisionManager extends Entity {
     private _player: Player | null = null;
 
-    public start(): void {
+    protected override _onStart(): void {
         this._player = this._callbacks.findEntityByName<Player>("Player");
     }
 
-    public update(): void {
-        if (this._player && this._player.boxCollider && this._player.isAlive) {
-            this._collideWithPlaygroundBorders(this._player, this._player.boxCollider);
-        }
-
-        for (const enemy of this._callbacks.findEntities((entity) => entity instanceof Enemy)) {
-            if (enemy.position[0] < -10) { // @Todo: hardcoded!
-                this._callbacks.destroyEntity(enemy);
-            }
-        }
-
-        for (const rocket of this._callbacks.findEntities((entity) => entity instanceof Rocket)) {
-            if (rocket.position[0] > 10) { // @Todo: hardcoded!
-                this._callbacks.destroyEntity(rocket);
-            }
-        }
-    }
-
-    public destroy(): void {
-        this._player = null;
-    }
-
-    private _collideWithPlaygroundBorders(entity: Entity, boxCollider: BoxCollider): void {
+    protected override _onUpdate(): void {
         const camera = this._callbacks.getCamera();
         const frustumPlanes = camera.makeFrustumFlanes();
 
-        const scaledBoxCollider: BoxCollider = {
-            max: multiplyVector3s(boxCollider.max, entity.scale),
-            min: multiplyVector3s(boxCollider.min, entity.scale),
-            delta: multiplyVector3s(boxCollider.delta, entity.scale),
-        };
+        if (this._player && this._player.isAlive) {
+            this._collideWithPlaygroundBorders(
+                this._player,
+                camera.position,
+                frustumPlanes,
+            );
+        }
+
+        const enemies = this._callbacks.findEntities((entity) => entity instanceof Enemy)
+        const rockets = this._callbacks.findEntities((entity) => entity instanceof Rocket)
+
+        if (rockets.length === 0) {
+            for (const enemy of enemies) {
+                if (enemy.position[0] < -10) { // @Todo: hardcoded!
+                    this._callbacks.destroyEntity(enemy);
+                }
+            }
+        } else if (enemies.length === 0) {
+            for (const rocket of rockets) {
+                if (rocket.position[0] > 10) { // @Todo: hardcoded!
+                    this._callbacks.destroyEntity(rocket);
+                }
+            }
+        } else {
+            for (const rocket of rockets) {
+                if (rocket.position[0] > 10) { // @Todo: hardcoded!
+                    this._callbacks.destroyEntity(rocket);
+                    continue;
+                }
+
+                if (!rocket.boxCollider) {
+                    continue;
+                }
+
+                const rocketCollider: BoxCollider = {
+                    min: addVector3s(rocket.boxCollider.min, rocket.position),
+                    max: addVector3s(rocket.boxCollider.max, rocket.position),
+                    delta: rocket.boxCollider.delta,
+                };
+
+                for (const enemy of enemies) {
+                    if (enemy.position[0] < -10) { // @Todo: hardcoded!
+                        this._callbacks.destroyEntity(enemy);
+                        continue;
+                    }
+
+                    if (!enemy.boxCollider) {
+                        continue;
+                    }
+
+                    const enemyCollider: BoxCollider = {
+                        min: addVector3s(enemy.boxCollider.min, enemy.position),
+                        max: addVector3s(enemy.boxCollider.max, enemy.position),
+                        delta: enemy.boxCollider.delta,
+                    };
+
+                    if (checkAABBCollision(rocketCollider.min, rocketCollider.max, enemyCollider.min, enemyCollider.max)) {
+                        this._callbacks.destroyEntity(enemy);
+                        this._callbacks.destroyEntity(rocket);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    protected override _onDestroy(): void {
+        this._player = null;
+    }
+
+    private _collideWithPlaygroundBorders(
+        entity: Entity,
+        cameraPosition: Vector3,
+        frustumPlanes: FrustumPlanes,
+    ): void {
+        if (!entity.boxCollider) {
+            return;
+        }
 
         // Offset to world position;
-        scaledBoxCollider.max = addVector3s(scaledBoxCollider.max, entity.position);
-        scaledBoxCollider.min = addVector3s(scaledBoxCollider.min, entity.position);
+        const scaledBoxCollider = {
+            max: addVector3s(entity.boxCollider.max, entity.position),
+            min: addVector3s(entity.boxCollider.min, entity.position),
+            delta: entity.boxCollider.delta,
+        };
 
         // Offset to camera position;
-        scaledBoxCollider.max = subtractVector3s(scaledBoxCollider.max, camera.position);
-        scaledBoxCollider.min = subtractVector3s(scaledBoxCollider.min, camera.position);
+        scaledBoxCollider.max = subtractVector3s(scaledBoxCollider.max, cameraPosition);
+        scaledBoxCollider.min = subtractVector3s(scaledBoxCollider.min, cameraPosition);
 
         const distanceToTop = dotProduct(frustumPlanes.top.normal, scaledBoxCollider.max)
             - dotProduct(frustumPlanes.top.normal, frustumPlanes.top.point);
@@ -331,4 +420,13 @@ export class CollisionManager extends Entity {
             return;
         }
     }
+}
+
+function checkAABBCollision(aMin: Vector3, aMax: Vector3, bMin: Vector3, bMax: Vector3): boolean {
+    return (
+        aMin[0] < bMax[0]
+        && aMax[0] > bMin[0]
+        && aMax[1] > bMin[1]
+        && aMin[1] < bMax[1]
+    );
 }
