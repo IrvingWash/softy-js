@@ -356,11 +356,23 @@ export class CollisionManager extends Entity {
             const distance = calculateDistanceToPlane(frustumPlanes.left, translatedMin);
             if (distance < -enemy.boxCollider.delta[0]) {
                 this._callbacks.destroyEntity(enemy);
-                console.log("hello!");
             }
         }
 
-        const collidableEntities = this._callbacks.findEntities<Entity & { boxCollider: BoxCollider }>(
+        for (
+            const rocket of this._callbacks.findEntities(
+            (entity): entity is Rocket & { boxCollider: BoxCollider } => entity instanceof Rocket && entity.boxCollider !== null)
+        ) {
+            let translatedMin = addVector3s(rocket.boxCollider.min, rocket.position);
+            translatedMin = subtractVector3s(translatedMin, camera.position);
+
+            const distance = calculateDistanceToPlane(frustumPlanes.left, translatedMin);
+            if (distance < -rocket.boxCollider.delta[0]) {
+                this._callbacks.destroyEntity(rocket);
+            }
+        }
+
+        const collidableEntities = this._callbacks.findEntities(
             (entity): entity is Entity & { boxCollider: BoxCollider } => entity.boxCollider !== null
         );
 
