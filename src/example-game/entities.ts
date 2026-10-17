@@ -346,6 +346,20 @@ export class CollisionManager extends Entity {
             );
         }
 
+        for (
+            const enemy of this._callbacks.findEntities(
+            (entity): entity is Enemy & { boxCollider: BoxCollider } => entity instanceof Enemy && entity.boxCollider !== null)
+        ) {
+            let translatedMin = addVector3s(enemy.boxCollider.min, enemy.position);
+            translatedMin = subtractVector3s(translatedMin, camera.position);
+
+            const distance = calculateDistanceToPlane(frustumPlanes.left, translatedMin);
+            if (distance < -enemy.boxCollider.delta[0]) {
+                this._callbacks.destroyEntity(enemy);
+                console.log("hello!");
+            }
+        }
+
         const collidableEntities = this._callbacks.findEntities<Entity & { boxCollider: BoxCollider }>(
             (entity): entity is Entity & { boxCollider: BoxCollider } => entity.boxCollider !== null
         );

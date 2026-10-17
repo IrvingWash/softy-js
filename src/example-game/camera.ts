@@ -17,6 +17,8 @@ export class Camera {
     public zNear: number;
     public zFar: number;
 
+    public aspectRatio: number = 0;
+
     public constructor(
         position: Vector3 = [0, 0, 0],
         fov: number = degreesToRadians(60),
@@ -37,11 +39,15 @@ export class Camera {
         this.pitch = pitch;
     }
 
+    public setAspectRatio(width: number, height: number): void {
+        this.aspectRatio = width / height;
+    }
+
     public update(target: Vector3): void {
         this.target = target;
     }
 
-    public makeFrustumFlanes(): FrustumPlanes {
-        return makeFrustumPlanes(this.fov, this.zNear, this.zFar);
+    public makeFrustumPlanes(): FrustumPlanes {
+        return makeFrustumPlanes(this.fov, this.aspectRatio, this.zNear, this.zFar);
     }
 }

@@ -68,6 +68,15 @@ export class ExampleGame {
 
         await game._loadLevel();
 
+        const canvasSize = game._canvas.getPixelSize();
+        game._camera.setAspectRatio(canvasSize[0], canvasSize[1]);
+
+        game._canvas.subscribeResize(() => {
+            const canvasSize = game._canvas.getPixelSize();
+
+            game._camera.setAspectRatio(canvasSize[0], canvasSize[1]);
+        });
+
         return game;
     }
 

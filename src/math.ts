@@ -24,43 +24,19 @@ export interface FrustumPlanes {
     far: Plane;
 }
 
-export function makeFrustumPlanes(fov: number, zNear: number, zFar: number): FrustumPlanes {
-    const halfFov = fov / 2;
-    const cosHalfFov = Math.cos(halfFov);
-    const sinHalfFov = Math.sin(halfFov);
-
-    const left: Plane = {
-        point: makeEmptyVector3(),
-        normal: [cosHalfFov, 0, sinHalfFov],
-    };
-    const right: Plane = {
-        point: makeEmptyVector3(),
-        normal: [-cosHalfFov, 0, sinHalfFov]
-    };
-    const top: Plane = {
-        point: makeEmptyVector3(),
-        normal: [0, -cosHalfFov, sinHalfFov]
-    };
-    const bottom: Plane = {
-        point: makeEmptyVector3(),
-        normal: [0, cosHalfFov, sinHalfFov]
-    };
-    const near: Plane = {
-        point: [0, 0, zNear],
-        normal: [0, 0, 1],
-    };
-    const far: Plane = {
-        point: [0, 0, zFar],
-        normal: [ 0, 0, -1],
-    };
+export function makeFrustumPlanes(fov: number, aspectRatioHorizontalOverVertical: number, zNear: number, zFar: number): FrustumPlanes {
+    const halfY = fov / 2;
+    const halfX = Math.atan(Math.tan(halfY) * aspectRatioHorizontalOverVertical);
+    const cosX = Math.cos(halfX), sinX = Math.sin(halfX);
+    const cosY = Math.cos(halfY), sinY = Math.sin(halfY);
 
     return {
-        left,
-        right,
-        top,
-        bottom,
-        near,
-        far,
+        left: { point: makeEmptyVector3(), normal: [ cosX, 0, sinX] },
+        right: { point: makeEmptyVector3(), normal: [-cosX, 0, sinX] },
+        top: { point: makeEmptyVector3(), normal: [0, -cosY, sinY] },
+        bottom: { point: makeEmptyVector3(), normal: [0,  cosY, sinY] },
+        near: { point: [0, 0, zNear], normal: [0, 0,  1] },
+        far: { point: [0, 0, zFar], normal: [0, 0, -1] },
     };
 }
 
