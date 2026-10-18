@@ -1,7 +1,7 @@
 # SoftyJS
 
-[Interactive demo (Model Viewer)](https://irvingwash.github.io/softy-js/)
-[Interactive demo (Shmup Game)](https://irvingwash.github.io/softy-js/game.html)
+- [Interactive demo (Model Viewer)](https://irvingwash.github.io/softy-js/)
+- [Interactive demo (Shmup Game)](https://irvingwash.github.io/softy-js/game.html)
 
 SoftyJS is a port of my project [Softy](https://github.com/IrvingWash/softy), a software 3D renderer, from Jai to TypeScript.<br>
 The port, as the original project, implements a software 3D renderer/rasterizer completely from scratch and doesn't have any dependencies (all the math is written from scatch too).<br>
