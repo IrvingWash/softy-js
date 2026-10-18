@@ -3,9 +3,9 @@
 [Interactive demo (Model Viewer)](https://irvingwash.github.io/softy-js/)
 [Interactive demo (Shmup Game)](https://irvingwash.github.io/softy-js/game.html)
 
-SoftyJS is a port of my other project [Softy](https://github.com/IrvingWash/softy), a software 3D renderer, from Jai to TypeScript.
-The port, as the original project, is written from scratch. It doesn't have any dependencies and implements a 3D renderer/rasterizer (including all the math) without using any Canvas drawing/rasterization API (the canvas only used as a surface).<br>
-The prorjects, both this port and the original, are written by hand, without LLM assistance, because this is a educational endeavor.
+SoftyJS is a port of my project [Softy](https://github.com/IrvingWash/softy), a software 3D renderer, from Jai to TypeScript.<br>
+The port, as the original project, implements a software 3D renderer/rasterizer completely from scratch and doesn't have any dependencies (all the math is written from scatch too).<br>
+The prorjects, both this port and the original, are written by hand, without LLM assistance, because this is a educational endeavor.<br>
 I wanted to learn how 3D rendering works under the hood. Though, the algorithms here are far worse than used by GPU driver developers, the project still provides a nice enough API and can render recognizible geometry.
 
 Current speed, when rendering a textured mesh, is 12000 triangles per 20FPS at Full HD resolution.<br>
