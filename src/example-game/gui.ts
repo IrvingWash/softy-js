@@ -24,7 +24,7 @@ export class GUI {
         this._welcomeDisplay.appendChild(controls);
 
         const warning = document.createElement("p");
-        warning.innerText = "This is a tech demo for my 3D software renderer/rasterizer \"Softy\".\nThis is about the rendering and the API.\nSo don't expect a nice gameplay";
+        warning.innerText = "This is a tech demo for my 3D software renderer/rasterizer \"Softy\".\nThis is about the rendering and the API.\nIt's not about the game. So don't expect a nice gameplay";
         this._welcomeDisplay.appendChild(warning);
 
         const megaWarning = document.createElement("p");
@@ -65,6 +65,35 @@ export class GUI {
         this._hpDisplay.style.color = "white";
         this._hpDisplay.style.fontSize = "20pt";
         document.body.appendChild(this._hpDisplay);
+
+        const footer = document.createElement("footer");
+        footer.style.position = "fixed";
+        footer.style.zIndex = "999";
+        footer.style.bottom = "0%";
+        footer.style.color = "white";
+        footer.style.left = "50%";
+        footer.style.transform = "translate(-50%, -50%)";
+        document.body.appendChild(footer);
+
+        const modelViewer = document.createElement("p");
+        modelViewer.style.textAlign = "center";
+        modelViewer.innerText = "Check out the other demo - ";
+        footer.appendChild(modelViewer);
+        const modelViewerLink = document.createElement("a");
+        modelViewerLink.href = "https://irvingwash.github.io/softy-js/";
+        modelViewerLink.target = "_blank";
+        modelViewerLink.innerText = '"Model viewer"';
+        modelViewer.appendChild(modelViewerLink);
+
+        const aboutDisplay = document.createElement("p");
+        aboutDisplay.style.textAlign = "center";
+        aboutDisplay.innerText = "SoftyJS - ";
+        footer.appendChild(aboutDisplay);
+        const repoLink = document.createElement("a");
+        repoLink.href = "https://github.com/IrvingWash/softy-js";
+        repoLink.target = "_blank";
+        repoLink.innerText = "github";
+        aboutDisplay.appendChild(repoLink);
     }
 
     public updateScore(value: number, warp: boolean): void {

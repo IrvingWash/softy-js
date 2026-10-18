@@ -480,6 +480,45 @@ export class EnemySpawner extends Entity {
     }
 }
 
+let towers = 0;
+
+export class Tower extends Entity {
+    public override scale: Vector3 = [0.1, 0.1, 0.1];
+    public override position: Vector3 = [10, -8, 5];
+
+    public override modelPath: string = "assets/models/tower.obj";
+    public override texturePath: string = "assets/models/tower.png";
+
+    private _speed: number = 5;
+
+    public setWarpMode(): void {
+        this._speed = 40;
+    }
+
+    protected override _onStart(): void {
+        this.tint = [Math.random() * 255, Math.random() * 255, Math.random() * 255];
+
+        if (towers >= 2) {
+            return;
+        }
+
+        const tower = new Tower(this._callbacks);
+        tower.position[0] = this.position[0] - 20;
+
+        towers += 1;
+
+        this._callbacks.spawnEntity(tower);
+    }
+
+    protected override _onUpdate(deltaTime: number): void {
+        this.position[0] -= deltaTime * this._speed;
+
+        if (this.position[0] < -40) {
+            this.position[0] = 40;
+        }
+    }
+}
+
 export class CollisionManager extends Entity {
     private _player: Player | null = null;
 

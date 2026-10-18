@@ -1,6 +1,7 @@
 # SoftyJS
 
-[Interactive demo](https://irvingwash.github.io/softy-js/)
+[Interactive demo (Model Viewer)](https://irvingwash.github.io/softy-js/)
+[Interactive demo (Shmup Game)](https://irvingwash.github.io/softy-js/game.html)
 
 SoftyJS is a port of my other project [Softy](https://github.com/IrvingWash/softy), a software 3D renderer, from Jai to TypeScript.
 The port, as the original project, is written from scratch. It doesn't have any dependencies and implements a 3D renderer/rasterizer (including all the math) without using any Canvas drawing/rasterization API (the canvas only used as a surface).<br>
@@ -34,8 +35,9 @@ There are four independent libraries:
 - `obj-parser.ts` - A naive OBJ parser
 - `renderer.ts` - Contains all the rendering and rasterization logic
 
-And an example:
-- `example-app/` - The application which calls into the above libraries. Contains a "game loop" and GUI controls
+And two examples:
+- `example-app/`  - The application which calls into the above libraries. Contains a "game loop" and GUI controls
+- `example-game/` - A very simple shmup where several entities are drawn using all the capabilities of Softy.
 
 ### Usage example
 ```ts

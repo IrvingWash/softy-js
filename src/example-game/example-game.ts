@@ -3,7 +3,7 @@ import { Renderer, RenderMode } from '../renderer';
 import { MtlData, ObjData, parseMtl, parseObj, UVFlip } from "../obj-parser";
 
 import { Camera } from "./camera";
-import { EntityCallbacks, Entity, Player, CollisionManager, EnemySpawner } from "./entities";
+import { EntityCallbacks, Entity, Player, CollisionManager, EnemySpawner, Tower } from "./entities";
 import { Vector3 } from '../math';
 import { GUI } from './gui';
 
@@ -41,13 +41,18 @@ const LEVEL_1_METADATA: LevelMetadata = {
             obj: "assets/models/plane.obj",
             mtl: null,
         },
+        {
+            obj: "assets/models/tower.obj",
+            mtl: null,
+        },
     ],
     texturePaths: [
         "assets/models/f22.png",
         "assets/models/jet.png",
         "assets/models/explosion.png",
+        "assets/models/tower.png",
     ],
-    entities: [Player, EnemySpawner, CollisionManager],
+    entities: [Player, Tower, EnemySpawner, CollisionManager],
 } as const;
 
 export class ExampleGame {
@@ -146,6 +151,7 @@ export class ExampleGame {
             }
 
             this._activeEntities.find((entity) => entity instanceof EnemySpawner)?.setWarpMode();
+            this._activeEntities.filter((entity) => entity instanceof Tower).forEach((tower) => tower.setWarpMode());
         }
     }
 

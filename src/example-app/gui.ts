@@ -488,16 +488,22 @@ export class GUI {
 
         this._menuWrapper.appendChild(footerWrapper);
 
+        const gameDisplay = document.createElement("p");
+        gameDisplay.innerText = "Check out the other demo - ";
+        footerWrapper.appendChild(gameDisplay);
+        const gameLink = document.createElement("a");
+        gameLink.href = "https://irvingwash.github.io/softy-js/game.html";
+        gameLink.target = "_blank";
+        gameLink.innerText = '"Game"';
+        gameDisplay.appendChild(gameLink);
+
         const aboutDisplay = document.createElement("p");
         aboutDisplay.innerText = "SoftyJS - ";
-
         footerWrapper.appendChild(aboutDisplay);
-
         const repoLink = document.createElement("a");
         repoLink.href = "https://github.com/IrvingWash/softy-js";
         repoLink.target = "_blank";
         repoLink.innerText = "github";
-
         aboutDisplay.appendChild(repoLink);
     }
 }

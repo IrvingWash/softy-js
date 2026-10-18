@@ -1,4 +1,4 @@
-import { ExampleApp } from "./example-app/example-app";
+import { ExampleApp } from "./example-app";
 
 async function main(): Promise<void> {
     const app = new ExampleApp();
