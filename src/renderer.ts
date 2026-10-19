@@ -14,7 +14,7 @@ import {
     multiplyMatrix4AndVector3,
     multiplyMatrix4s,
     multiplyVector3s,
-    normalize,
+    normalizeVector3,
     projectVectorPerspective,
     scaleVector3,
     subtractVector3s,
@@ -221,7 +221,7 @@ export class Renderer {
 
     public setDirectionalLight(light: DirectionalLight) {
         this._directionalLight = light;
-        this._directionalLight.normalizedDirection = normalize(this._directionalLight.direction);
+        this._directionalLight.normalizedDirection = normalizeVector3(this._directionalLight.direction);
     }
 
     public getDirectionalLight(): DirectionalLight | null {

@@ -304,25 +304,47 @@ export function crossProductVector2(a: Vector2, b: Vector2): number {
     return a[0] * b[1] - a[1] * b[0];
 }
 
-export function magnitude(v: Vector3): number {
+export function magnitudeVector3(v: Vector3): number {
     return Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 }
 
-export function normalize(v: Vector3): Vector3 {
-    const length = magnitude(v);
+export function magnitudeVector2(v: Vector2): number {
+    return Math.sqrt(v[0] * v[0] + v[1] * v[1]);
+}
+
+export function normalizeVector3(v: Vector3): Vector3 {
+    const length = magnitudeVector3(v);
 
     return divideVector3(v, length);
 }
 
+export function normalizeVector2(v: Vector2): Vector2 {
+    const length = magnitudeVector2(v);
+
+    return divideVector2(v, length);
+}
+
 export function divideVector3(v: Vector3, s: number): Vector3 {
+    if (s === 0) {
+        return v;
+    }
+
     return [v[0] / s, v[1] / s, v[2] / s];
+}
+
+export function divideVector2(v: Vector2, s: number): Vector2 {
+    if (s === 0) {
+        return v;
+    }
+
+    return [v[0] / s, v[1] / s];
 }
 
 export function calculateFaceNormal(a: Vector3, b: Vector3, c: Vector3): Vector3 {
     const vectorAB = subtractVector3s(b, a);
     const vectorAC = subtractVector3s(c, a);
 
-    const normal = normalize(crossProduct(vectorAB, vectorAC));
+    const normal = normalizeVector3(crossProduct(vectorAB, vectorAC));
 
     return normal;
 }
@@ -369,8 +391,8 @@ export function degreesToRadians(degrees: number): number {
 // |  0    0    0        1      | //
 // Left-handed
 export function makeLookAtMatrix(eye: Vector3, target: Vector3, worldUp: Vector3): Matrix4 {
-    const z = normalize(subtractVector3s(target, eye));       // Vector pointing from eye to target
-    const x = normalize(crossProduct(worldUp, z)); // Perpendicular vector to world_up and z
+    const z = normalizeVector3(subtractVector3s(target, eye));       // Vector pointing from eye to target
+    const x = normalizeVector3(crossProduct(worldUp, z)); // Perpendicular vector to world_up and z
     const y = crossProduct(z, x);                   // Perpendicular vector to z and x
 
     const matrix = makeMatrix4Identity();
