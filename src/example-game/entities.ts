@@ -195,6 +195,10 @@ export class Player extends Entity {
         ) {
             this.hp -= 1;
 
+            const explosion = new Explosion(this._callbacks);
+            explosion.position = this.position;
+            this._callbacks.spawnEntity(explosion);
+
             this._blinkInterval = setInterval(() => {
                 if (!this.model) {
                     this.model = this._hiddenModel;
@@ -234,10 +238,6 @@ export class Player extends Entity {
 
         this._disableCondrols();
         this._velocity = [0, 0];
-
-        const explosion = new Explosion(this._callbacks);
-        explosion.position = this.position;
-        this._callbacks.spawnEntity(explosion);
 
         const enemySpawners = this._callbacks.findEntities((entity: Entity): entity is EnemySpawner => entity instanceof EnemySpawner);
 
@@ -709,8 +709,13 @@ export class State extends Entity {
 
     protected override _onUpdate(): void {
         if (this._player && !this._player.isAlive) {
-            this._callbacks.setPause(true)
-            this._callbacks.getGui().showGameOver();
+            setTimeout(
+                () => {
+                    this._callbacks.setPause(true)
+                    this._callbacks.getGui().showGameOver();
+                },
+                1000,
+            );
         }
 
         if (!this.warpMode && this.score >= 5) {
