@@ -23,6 +23,7 @@ export class Canvas {
         element.width = width;
         element.height = height;
         element.style.position = "absolute";
+        element.style.touchAction = "none";
 
         const context = element.getContext("2d");
         if (context === null) {
