@@ -23,6 +23,8 @@ import {
 } from "../math";
 
 import { Camera } from "./camera";
+import { GUI } from "./gui";
+import { Renderer, RenderMode } from "../renderer";
 
 export interface EntityCallbacks {
     spawnEntity: (entity: Entity) => void;
@@ -30,7 +32,9 @@ export interface EntityCallbacks {
     findEntityByName: <T extends Entity>(name: string) => T | null;
     findEntities: <T extends Entity>(cb: (entity: Entity) => entity is T) => T[];
     getCamera: () => Camera;
-    incrementScore: () => void;
+    getGui: () => GUI;
+    getRenderer: () => Renderer;
+    setPause: (paused: boolean) => void;
 }
 
 interface BoxCollider {
@@ -157,6 +161,8 @@ export class Player extends Entity {
     }
 
     protected override _onUpdate(deltaTime: number): void {
+        this._callbacks.getGui().updateHp(this.hp);
+
         const displacement = scaleVector2(this._velocity, deltaTime);
         this.position[0] += displacement[0];
         this.position[1] += displacement[1];
@@ -207,7 +213,7 @@ export class Player extends Entity {
                     if (!this.model) {
                         this.model = this._hiddenModel;
                         this._hiddenModel = null;
-                    } 
+                    }
 
                     this._stopBlinkingTimeout = null;
                 },
@@ -221,6 +227,8 @@ export class Player extends Entity {
     }
 
     protected override _onDestroy(): void {
+        this._callbacks.getGui().updateHp(this.hp);
+
         this.isAlive = false;
 
         this._disableCondrols();
@@ -308,11 +316,14 @@ export class Enemy extends Entity {
     public override modelPath: string = "assets/models/jet.obj";
     public override texturePath = "assets/models/jet.png";
 
+    private _state: State | null = null;
     private _speed: number = 5;
     private _intervalId: number | null = null;
     private _killedByPlayer: boolean = false;
 
     public override _onStart(): void {
+        this._state = this._callbacks.findEntities<State>((entity) => entity instanceof State)[0];
+
         this.tint = [Math.random() * 255, Math.random() * 255, Math.random() * 255];
 
         this._intervalId = setInterval(this._shootRocket, 1000);
@@ -370,7 +381,9 @@ export class Enemy extends Entity {
         }
 
         if (this._killedByPlayer) {
-            this._callbacks.incrementScore();
+            if (this._state) {
+                this._state.score++;
+            }
 
             const explosion = new Explosion(this._callbacks);
             explosion.position = this.position;
@@ -408,6 +421,7 @@ export class Rocket extends Entity {
 
         if (this.initiator === RocketInititator.Enemy) {
             this._speed *= -1;
+            this.rotation = [0, degreesToRadians(90), 0];
         }
     }
 
@@ -425,6 +439,12 @@ export class Rocket extends Entity {
 
     protected override _onUpdate(deltaTime: number): void {
         this.position[0] += this._speed * deltaTime;
+
+        if (this.initiator === RocketInititator.Player) {
+            this.rotation[2] += this._speed * deltaTime;
+        } else {
+            this.rotation[2] -= this._speed * deltaTime;
+        }
     }
 
     protected _onCollision(other: Entity): void {
@@ -484,7 +504,8 @@ let towers = 0;
 
 export class Tower extends Entity {
     public override scale: Vector3 = [0.1, 0.1, 0.1];
-    public override position: Vector3 = [10, -8, 5];
+    public override position: Vector3 = [10, -8, 40];
+    public override rotation: Vector3 = [0, degreesToRadians(180), 0];
 
     public override modelPath: string = "assets/models/tower.obj";
     public override texturePath: string = "assets/models/tower.png";
@@ -498,12 +519,13 @@ export class Tower extends Entity {
     protected override _onStart(): void {
         this.tint = [Math.random() * 255, Math.random() * 255, Math.random() * 255];
 
-        if (towers >= 2) {
+        if (towers >= 10) {
             return;
         }
 
         const tower = new Tower(this._callbacks);
-        tower.position[0] = this.position[0] - 20;
+        tower.position[0] = this.position[0] - Math.random() * 20;
+        tower.position[2] = Math.max(20, this.position[2] * Math.random());
 
         towers += 1;
 
@@ -613,6 +635,73 @@ export class CollisionManager extends Entity {
 
     protected override _onDestroy(): void {
         this._player = null;
+    }
+}
+
+export class Moon extends Entity {
+    public override position: Vector3 = [8, 8, 10];
+    public override rotation: Vector3 = [0, 0, 0];
+    public override scale: Vector3 = [0.02, 0.02, 0.02];
+
+    public override modelPath = "assets/models/moon.obj";
+    public override texturePath = "assets/models/moon.png";
+
+    private _rotationSpeed: number = 0.01;
+
+    protected override _onUpdate(deltaTime: number): void {
+        this.rotation[1] += this._rotationSpeed * deltaTime;
+    }
+
+    public setWarpMode(): void {
+        this._rotationSpeed = 0.1;
+    }
+}
+
+export class State extends Entity {
+    public score: number = 0;
+    public warpMode: boolean = false;
+
+    private _player: Player | null = null;
+
+    protected override _onStart(): void {
+        this._player = this._callbacks.findEntityByName("Player");
+    }
+
+    protected override _onUpdate(): void {
+        if (this._player && !this._player.isAlive) {
+            this._callbacks.setPause(true)
+            this._callbacks.getGui().showGameOver();
+        }
+
+        if (!this.warpMode && this.score >= 5) {
+            this.warpMode = true;
+
+            const player = this._callbacks.findEntityByName("Player");
+            if (player) {
+                player.tint = [0, 0, 0];
+            }
+
+            const spawners = this._callbacks.findEntities<EnemySpawner>((entity) => entity instanceof EnemySpawner);
+            for (const spawner of spawners) {
+                spawner.setWarpMode();
+            }
+
+            const towers = this._callbacks.findEntities<Tower>((entity) => entity instanceof Tower);
+            for (const tower of towers) {
+                tower.setWarpMode();
+            }
+
+            const moons = this._callbacks.findEntities<Moon>((entity) => entity instanceof Moon);
+            for (const moon of moons) {
+                moon.setWarpMode();
+            }
+
+            const renderer = this._callbacks.getRenderer();
+            renderer.setRenderMode(RenderMode.Wireframe);
+            renderer.setClearColor([150, 0, 0]);
+        }
+
+        this._callbacks.getGui().updateScore(this.score, this.warpMode);
     }
 }
 

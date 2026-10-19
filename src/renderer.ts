@@ -430,7 +430,7 @@ export class Renderer {
             return;
         }
 
-        if (color[3] !== 0) { // This is a very stupid way of doing blending (works only for completely transparent objects). But I'm to tired now to make this better
+        if (color[3] === 255) { // This is a very stupid way of doing blending (works only for completely transparent objects). But I'm to tired now to make this better
             this._frameBuffer.colors[position[1] * width + position[0]] = toCanvasColorFormat([color[0], color[1], color[2]], color[3]);
         }
     }

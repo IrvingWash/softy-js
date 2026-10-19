@@ -1,7 +1,7 @@
 export class GUI {
     private _welcomeDisplay: HTMLParagraphElement;
-    private _scoreDisplay: HTMLParagraphElement;
-    private _hpDisplay: HTMLParagraphElement;
+    private _scoreDisplay!: HTMLParagraphElement;
+    private _hpDisplay!: HTMLParagraphElement;
 
     public constructor(unpause: () => void) {
         this._welcomeDisplay = document.createElement("div");
@@ -32,39 +32,22 @@ export class GUI {
         megaWarning.style.color = "red";
         this._welcomeDisplay.appendChild(megaWarning);
 
-        addEventListener("keypress", (event) => {
-            if (event.code === "Space") {
-                document.body.removeChild(this._welcomeDisplay);
-                unpause();
-            }
-        });
-
         const letsGo = document.createElement("p");
         letsGo.innerText = "Press SPACE to start";
         letsGo.style.fontSize = "20pt";
         this._welcomeDisplay.appendChild(letsGo);
 
-        this._scoreDisplay = document.createElement("p");
-        this._scoreDisplay.innerText = "Score: 0";
-        this._scoreDisplay.style.zIndex = "999";
-        this._scoreDisplay.style.position = "fixed";
-        this._scoreDisplay.style.textAlign = "center";
-        this._scoreDisplay.style.top = "5%";
-        this._scoreDisplay.style.left = "5%";
-        this._scoreDisplay.style.color = "white";
-        this._scoreDisplay.style.fontSize = "20pt";
-        document.body.appendChild(this._scoreDisplay);
+        const start = (event: KeyboardEvent) => {
+            if (event.code === "Space") {
+                document.body.removeChild(this._welcomeDisplay);
 
-        this._hpDisplay = document.createElement("p");
-        this._hpDisplay.innerText = "HP: 0";
-        this._hpDisplay.style.zIndex = "999";
-        this._hpDisplay.style.position = "fixed";
-        this._hpDisplay.style.textAlign = "center";
-        this._hpDisplay.style.top = "10%";
-        this._hpDisplay.style.left = "5%";
-        this._hpDisplay.style.color = "white";
-        this._hpDisplay.style.fontSize = "20pt";
-        document.body.appendChild(this._hpDisplay);
+                this._createTheRestOfGui();
+                unpause();
+
+                removeEventListener("keypress", start);
+            }
+        }
+        addEventListener("keypress", start);
 
         const footer = document.createElement("footer");
         footer.style.position = "fixed";
@@ -102,5 +85,44 @@ export class GUI {
 
     public updateHp(value: number): void {
         this._hpDisplay.innerText = `HP: ${value}`;
+    }
+
+    public showGameOver(): void {
+        const gameOverDisplay = document.createElement("p");
+        gameOverDisplay.innerText = "Game over";
+        gameOverDisplay.style.position = "fixed";
+        gameOverDisplay.style.zIndex = "999";
+        gameOverDisplay.style.top = "50%";
+        gameOverDisplay.style.left = "50%";
+        gameOverDisplay.style.color = "white";
+        gameOverDisplay.style.fontSize = "12pt";
+        gameOverDisplay.style.transform = "translate(-50%, -50%)";
+        gameOverDisplay.style.fontSize = "30px";
+
+        document.body.appendChild(gameOverDisplay);
+    }
+
+    private _createTheRestOfGui(): void {
+        this._scoreDisplay = document.createElement("p");
+        this._scoreDisplay.innerText = "Score: 0";
+        this._scoreDisplay.style.zIndex = "999";
+        this._scoreDisplay.style.position = "fixed";
+        this._scoreDisplay.style.textAlign = "center";
+        this._scoreDisplay.style.top = "5%";
+        this._scoreDisplay.style.left = "5%";
+        this._scoreDisplay.style.color = "white";
+        this._scoreDisplay.style.fontSize = "20pt";
+        document.body.appendChild(this._scoreDisplay);
+
+        this._hpDisplay = document.createElement("p");
+        this._hpDisplay.innerText = "HP: 0";
+        this._hpDisplay.style.zIndex = "999";
+        this._hpDisplay.style.position = "fixed";
+        this._hpDisplay.style.textAlign = "center";
+        this._hpDisplay.style.top = "10%";
+        this._hpDisplay.style.left = "5%";
+        this._hpDisplay.style.color = "white";
+        this._hpDisplay.style.fontSize = "20pt";
+        document.body.appendChild(this._hpDisplay);
     }
 }

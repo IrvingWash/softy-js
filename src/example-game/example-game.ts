@@ -1,9 +1,9 @@
 import { Canvas } from '../canvas';
-import { Renderer, RenderMode } from '../renderer';
+import { Renderer } from '../renderer';
 import { MtlData, ObjData, parseMtl, parseObj, UVFlip } from "../obj-parser";
 
 import { Camera } from "./camera";
-import { EntityCallbacks, Entity, Player, CollisionManager, EnemySpawner, Tower } from "./entities";
+import { EntityCallbacks, Entity, Player, CollisionManager, EnemySpawner, Tower, State, Moon } from "./entities";
 import { Vector3 } from '../math';
 import { GUI } from './gui';
 
@@ -45,14 +45,19 @@ const LEVEL_1_METADATA: LevelMetadata = {
             obj: "assets/models/tower.obj",
             mtl: null,
         },
+        {
+            obj: "assets/models/moon.obj",
+            mtl: null,
+        },
     ],
     texturePaths: [
         "assets/models/f22.png",
         "assets/models/jet.png",
         "assets/models/explosion.png",
         "assets/models/tower.png",
+        "assets/models/moon.png",
     ],
-    entities: [Player, Tower, EnemySpawner, CollisionManager],
+    entities: [Player, Tower, EnemySpawner, CollisionManager, State, Moon],
 } as const;
 
 export class ExampleGame {
@@ -72,8 +77,6 @@ export class ExampleGame {
     private _entitiesToDestroy: Set<Entity> = new Set();
 
     private _paused: boolean = true;
-    private _score: number = 0;
-    private _warpMode: boolean = false;
 
     private constructor() {
         this._canvas = Canvas.createFullscreen();
@@ -132,26 +135,6 @@ export class ExampleGame {
 
         for (const entity of this._activeEntities) {
             entity.update(this._deltaTime);
-
-            if (entity instanceof Player) {
-                this._gui.updateHp(entity.hp);
-            }
-        }
-
-        if (this._score >= 5 && !this._warpMode)  {
-            this._warpMode = true;
-
-            this._renderer.setRenderMode(RenderMode.Wireframe);
-            this._renderer.setClearColor([150, 0, 0]);
-            this._gui.updateScore(this._score, this._warpMode);
-
-            const player = this._activeEntities.find((entity) => entity instanceof Player);
-            if (player) {
-                player.tint = [0, 0, 0];
-            }
-
-            this._activeEntities.find((entity) => entity instanceof EnemySpawner)?.setWarpMode();
-            this._activeEntities.filter((entity) => entity instanceof Tower).forEach((tower) => tower.setWarpMode());
         }
     }
 
@@ -213,10 +196,9 @@ export class ExampleGame {
                 return this._activeEntities.filter(cb);
             },
             destroyEntity: this._destroyEntity,
-            incrementScore: () => {
-                this._score += 1;
-                this._gui.updateScore(this._score, this._warpMode);
-            }
+            getGui: () => this._gui,
+            getRenderer: () => this._renderer,
+            setPause: (paused: boolean) => this._paused = paused,
         };
 
         for (const entityConstructor of LEVEL_1_METADATA.entities) {
