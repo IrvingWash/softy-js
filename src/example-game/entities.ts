@@ -488,11 +488,25 @@ export class EnemySpawner extends Entity {
     }
 
     private _startSpawning(): void {
+        const camera = this._callbacks.getCamera();
+        let { right: rightPlane } = camera.makeFrustumPlanes();
+        let previousAspectRatio = camera.aspectRatio;
+
         this._intervalId = setInterval(
             () => {
+                if (previousAspectRatio !== camera.aspectRatio) {
+                    previousAspectRatio = previousAspectRatio;
+                    rightPlane = camera.makeFrustumPlanes().right;
+                }
+
                 const enemy = new Enemy(this._callbacks);
-                enemy.position[0] = 10;
                 enemy.position[1] = Math.random() * 5 * (Math.random() > 0.5 ? -1 : 1);
+                enemy.position[0] = camera.position[0];
+                const distanceToRight = calculateDistanceToPlane(
+                    rightPlane,
+                    subtractVector3s(enemy.position, camera.position),
+                );
+                enemy.position[0] += -distanceToRight / rightPlane.normal[0];
 
                 this._callbacks.spawnEntity(enemy);
             },
@@ -629,8 +643,8 @@ export class StarSpawner extends Entity {
 
         for (const star of this._stars) {
             const viewSpacePosition = subtractVector3s(star.position, camera.position);
-
             const distanceToLeftPlane = calculateDistanceToPlane(leftPlane, viewSpacePosition);
+
             if (distanceToLeftPlane < 0) {
                 star.position[0] += calculateDistanceToPlane(
                     rightPlane,
