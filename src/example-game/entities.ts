@@ -407,7 +407,7 @@ const enum RocketInititator {
 
 export class Rocket extends Entity {
     public override rotation: Vector3 = [0, degreesToRadians(-90), 0];
-    public override scale: Vector3 = [0.03, 0.03, 0.03];
+    public override scale: Vector3 = [0.05, 0.05, 0.07];
 
     public override modelPath: string = "assets/models/rocket.obj";
 
@@ -442,9 +442,9 @@ export class Rocket extends Entity {
         this.position[0] += this._speed * deltaTime;
 
         if (this.initiator === RocketInititator.Player) {
-            this.rotation[2] += this._speed * deltaTime;
+            this.rotation[2] += this._speed / 2 * deltaTime;
         } else {
-            this.rotation[2] -= this._speed * deltaTime;
+            this.rotation[2] -= this._speed / 2 * deltaTime;
         }
     }
 
