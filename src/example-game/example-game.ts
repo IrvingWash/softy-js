@@ -21,8 +21,8 @@ interface LevelMetadata {
 
 const LEVEL_1_METADATA: LevelMetadata = {
     backgroundColor: [35, 35, 35] as Vector3,
-    sunColor: [255, 153, 255] as Vector3,
-    sunDirection: [-1, 1, 1] as Vector3,
+    sunColor: [200, 200, 255] as Vector3,
+    sunDirection: [0, -1, 1] as Vector3,
     cameraPosition: [0, 0, -9] as Vector3,
     modelPaths: [
         {
