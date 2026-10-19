@@ -678,14 +678,14 @@ export class Star extends Entity {
 }
 
 export class Moon extends Entity {
-    public override position: Vector3 = [15, 10, 100];
+    public override position: Vector3 = [-15, 15, 100];
     public override rotation: Vector3 = [0, 0, 0];
     public override scale: Vector3 = [0.2, 0.2, 0.2];
 
     public override modelPath = "assets/models/moon.obj";
     public override texturePath = "assets/models/moon.png";
 
-    private _rotationSpeed: number = 0.01;
+    private _rotationSpeed: number = 0.05;
 
     protected override _onUpdate(deltaTime: number): void {
         this.rotation[1] += this._rotationSpeed * deltaTime;
