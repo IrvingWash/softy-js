@@ -56,6 +56,7 @@ export abstract class Entity {
     public modelPath: string | null = null;
     public texturePath: string | null = null;
 
+    public hasCollision: boolean = true;
     public boxCollider: BoxCollider | null = null;
 
     protected _callbacks: EntityCallbacks;
@@ -519,6 +520,7 @@ export class CollisionManager extends Entity {
             );
         }
 
+        // Destroy offscreen enemies
         for (
             const enemy of this._callbacks.findEntities(
             (entity): entity is Enemy & { boxCollider: BoxCollider } => entity instanceof Enemy && entity.boxCollider !== null)
@@ -532,6 +534,7 @@ export class CollisionManager extends Entity {
             }
         }
 
+        // Destroy offscreen player rockets
         for (
             const playerRocket of this._callbacks.findEntities(
                 (entity): entity is Rocket & { boxCollider: BoxCollider } => entity instanceof Rocket
@@ -548,6 +551,7 @@ export class CollisionManager extends Entity {
             }
         }
 
+        // Destro offscreen enemy rockets
         for (
             const enemyRocket of this._callbacks.findEntities(
                 (entity): entity is Rocket & { boxCollider: BoxCollider } => entity instanceof Rocket
@@ -565,9 +569,8 @@ export class CollisionManager extends Entity {
         }
 
         const collidableEntities = this._callbacks.findEntities(
-            (entity): entity is Entity & { boxCollider: BoxCollider } => entity.boxCollider !== null
+            (entity): entity is Entity & { boxCollider: BoxCollider } => entity.boxCollider !== null && entity.hasCollision
         );
-
         for (let i = 0; i < collidableEntities.length; i ++) {
             const a = collidableEntities[i]!;
             const aCollider: BoxCollider = {
@@ -597,8 +600,71 @@ export class CollisionManager extends Entity {
     }
 }
 
+const MAX_STAR_COUNT = 50;
+export class StarSpawner extends Entity {
+    private _stars: Star[] = [];
+
+    protected override _onStart(): void {
+        for (let i = 0; i <= MAX_STAR_COUNT; i++) {
+            const star = new Star(this._callbacks);
+
+            star.position[0] = Math.random() * 100 * (Math.random() > 0.5 ? -1 : 1);
+            star.position[1] = Math.random() * 100 * (Math.random() > 0.5 ? -1 : 1);
+            star.position[2] = 100;
+
+            const scaleFactor = Math.max(0.1, Math.random());
+            star.scale[0] *= scaleFactor;
+            star.scale[2] *= scaleFactor;
+
+            this._stars.push(star);
+        }
+
+        this._stars.forEach(this._callbacks.spawnEntity);
+    }
+
+    protected _onUpdate(): void {
+        const camera = this._callbacks.getCamera();
+
+        const { left: leftPlane, right: rightPlane } = camera.makeFrustumPlanes();
+
+        for (const star of this._stars) {
+            const viewSpacePosition = subtractVector3s(star.position, camera.position);
+
+            const distanceToLeftPlane = calculateDistanceToPlane(leftPlane, viewSpacePosition);
+            if (distanceToLeftPlane < 0) {
+                star.position[0] += calculateDistanceToPlane(
+                    rightPlane,
+                    viewSpacePosition,
+                ) / -rightPlane.normal[0];
+            }
+        }
+    }
+}
+
+export class Star extends Entity {
+    public override position: Vector3 = [0, 0, 100];
+    public override scale: Vector3 = [3, 1, 3];
+    public override rotation: Vector3 = [degreesToRadians(-90), 0, 0];
+    public override tint: Vector3 = [155, 0, 0];
+    public override hasCollision: boolean = false;
+
+    public override modelPath = "assets/models/plane.obj";
+    public override texturePath = "assets/models/star.png";
+
+    private _speed: number = 10;
+
+    protected override _onUpdate(deltaTime: number): void {
+        this.position[0] -= this._speed * deltaTime;
+    }
+
+    public setWarpMode(): void {
+        this._speed = 40;
+        this.tint = [100, 100, 100];
+    };
+}
+
 export class Moon extends Entity {
-    public override position: Vector3 = [8, -5, 100];
+    public override position: Vector3 = [15, 10, 100];
     public override rotation: Vector3 = [0, 0, 0];
     public override scale: Vector3 = [0.2, 0.2, 0.2];
 
@@ -613,6 +679,7 @@ export class Moon extends Entity {
 
     public setWarpMode(): void {
         this._rotationSpeed = 0.1;
+        this.tint = [100, 0, 0];
     }
 }
 
@@ -648,6 +715,11 @@ export class State extends Entity {
             const moons = this._callbacks.findEntities<Moon>((entity) => entity instanceof Moon);
             for (const moon of moons) {
                 moon.setWarpMode();
+            }
+
+            const stars = this._callbacks.findEntities<Star>((entity) => entity instanceof Star);
+            for (const star of stars) {
+                star.setWarpMode();
             }
 
             const renderer = this._callbacks.getRenderer();
@@ -710,8 +782,8 @@ function collideWithFrustumPlanes(
     }
 }
 
-function calculateDistanceToPlane(plane: Plane, position: Vector3): number {
-    const distance = dotProduct(plane.normal, position) - dotProduct(plane.normal, plane.point);
+function calculateDistanceToPlane(plane: Plane, viewSpacePosition: Vector3): number {
+    const distance = dotProduct(plane.normal, viewSpacePosition) - dotProduct(plane.normal, plane.point);
 
     return distance;
 }
