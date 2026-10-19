@@ -17,6 +17,7 @@ import {
     Plane,
     scaleVector2,
     scaleVector3,
+    subtractVector2s,
     subtractVector3s,
     Vector2,
     Vector3,
@@ -145,10 +146,16 @@ export class Player extends Entity {
     private _blinkInterval: number | null = null;
     private _stopBlinkingTimeout: number | null = null;
 
+    private _touchStartScreenSpacePosition: Vector2 = [0, 0];
+    private _throttledShootRocket = throttle(this._shootRocket.bind(this), 100);
+
     protected override _onStart(): void {
         window.addEventListener("keydown", this._onKeyDown);
         window.addEventListener("keyup", this._onKeyUp);
         window.addEventListener("keypress", this._onKeyPress);
+        window.addEventListener("touchstart", this._onTouchStart);
+        window.addEventListener("touchmove", this._onTouchMove);
+        window.addEventListener("touchend", this._onTouchEnd);
 
         if (this.boxCollider) {
             this.boxCollider = {
@@ -260,6 +267,9 @@ export class Player extends Entity {
         removeEventListener("keypress", this._onKeyPress);
         removeEventListener("keydown", this._onKeyDown);
         removeEventListener("keyup", this._onKeyUp);
+        removeEventListener("touchstart", this._onTouchStart);
+        removeEventListener("touchmove", this._onTouchMove);
+        removeEventListener("touchend", this._onTouchEnd);
     }
 
     private _shootRocket(): void {
@@ -307,6 +317,31 @@ export class Player extends Entity {
         if (event.code === "KeyD") {
             this._velocity[0] = this._speed;
         }
+    }
+
+    private _onTouchStart = (event: TouchEvent): void => {
+        const touch = event.touches[0];
+
+        this._touchStartScreenSpacePosition = [touch.clientX, touch.clientY];
+    }
+
+    private _onTouchMove = (event: TouchEvent): void => {
+        const touch = event.touches[0];
+        const current: Vector2 = [touch.clientX, touch.clientY];
+
+        const delta = subtractVector2s(current, this._touchStartScreenSpacePosition);
+
+        const DEAD = 10;
+        this._velocity[0] = Math.abs(delta[0]) < DEAD ? 0 : Math.sign(delta[0]) * this._speed;
+        this._velocity[1] = Math.abs(delta[1]) < DEAD ? 0 : -Math.sign(delta[1]) * this._speed;
+
+        if (delta[0] !== 0 || delta[1] !== 0) {
+            this._throttledShootRocket();
+        }
+    }
+
+    private _onTouchEnd = (): void => {
+        this._velocity = [0, 0];
     }
 }
 
@@ -805,4 +840,17 @@ function calculateDistanceToPlane(plane: Plane, viewSpacePosition: Vector3): num
     const distance = dotProduct(plane.normal, viewSpacePosition) - dotProduct(plane.normal, plane.point);
 
     return distance;
+}
+
+function throttle<T extends []>(cb: (...args: T) => void, delay: number): (...args: T) => void {
+    let isThrottling = false;
+
+    return (...args: T): void => {
+        if (!isThrottling) {
+            isThrottling = true;
+            setTimeout(() => { isThrottling = false }, delay);
+
+            return cb(...args);
+        }
+    };
 }
