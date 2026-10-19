@@ -37,17 +37,31 @@ export class GUI {
         letsGo.style.fontSize = "20pt";
         this._welcomeDisplay.appendChild(letsGo);
 
-        const start = (event: KeyboardEvent) => {
-            if (event.code === "Space") {
+        const start = (event: KeyboardEvent | TouchEvent) => {
+            if (event instanceof KeyboardEvent && event.code === "Space") {
                 document.body.removeChild(this._welcomeDisplay);
 
                 this._createTheRestOfGui();
                 unpause();
 
                 removeEventListener("keypress", start);
+
+                return;
+            }
+
+            if (event instanceof TouchEvent && event.type === "touchstart") {
+                document.body.removeChild(this._welcomeDisplay);
+
+                this._createTheRestOfGui();
+                unpause();
+
+                removeEventListener("touchstart", start);
+
+                return;
             }
         }
         addEventListener("keypress", start);
+        addEventListener("touchstart", start);
 
         const footer = document.createElement("footer");
         footer.style.position = "fixed";
