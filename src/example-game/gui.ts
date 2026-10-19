@@ -98,6 +98,8 @@ export class GUI {
         gameOverDisplay.style.fontSize = "12pt";
         gameOverDisplay.style.transform = "translate(-50%, -50%)";
         gameOverDisplay.style.fontSize = "30px";
+        gameOverDisplay.style.backgroundColor = "#333333";
+        gameOverDisplay.style.padding = "20px";
 
         document.body.appendChild(gameOverDisplay);
     }

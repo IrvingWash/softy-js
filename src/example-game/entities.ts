@@ -500,47 +500,6 @@ export class EnemySpawner extends Entity {
     }
 }
 
-let towers = 0;
-
-export class Tower extends Entity {
-    public override scale: Vector3 = [0.1, 0.1, 0.1];
-    public override position: Vector3 = [10, -8, 40];
-    public override rotation: Vector3 = [0, degreesToRadians(180), 0];
-
-    public override modelPath: string = "assets/models/tower.obj";
-    public override texturePath: string = "assets/models/tower.png";
-
-    private _speed: number = 5;
-
-    public setWarpMode(): void {
-        this._speed = 40;
-    }
-
-    protected override _onStart(): void {
-        this.tint = [Math.random() * 255, Math.random() * 255, Math.random() * 255];
-
-        if (towers >= 10) {
-            return;
-        }
-
-        const tower = new Tower(this._callbacks);
-        tower.position[0] = this.position[0] - Math.random() * 20;
-        tower.position[2] = Math.max(20, this.position[2] * Math.random());
-
-        towers += 1;
-
-        this._callbacks.spawnEntity(tower);
-    }
-
-    protected override _onUpdate(deltaTime: number): void {
-        this.position[0] -= deltaTime * this._speed;
-
-        if (this.position[0] < -40) {
-            this.position[0] = 40;
-        }
-    }
-}
-
 export class CollisionManager extends Entity {
     private _player: Player | null = null;
 
@@ -639,9 +598,9 @@ export class CollisionManager extends Entity {
 }
 
 export class Moon extends Entity {
-    public override position: Vector3 = [8, 8, 10];
+    public override position: Vector3 = [8, -5, 100];
     public override rotation: Vector3 = [0, 0, 0];
-    public override scale: Vector3 = [0.02, 0.02, 0.02];
+    public override scale: Vector3 = [0.2, 0.2, 0.2];
 
     public override modelPath = "assets/models/moon.obj";
     public override texturePath = "assets/models/moon.png";
@@ -684,11 +643,6 @@ export class State extends Entity {
             const spawners = this._callbacks.findEntities<EnemySpawner>((entity) => entity instanceof EnemySpawner);
             for (const spawner of spawners) {
                 spawner.setWarpMode();
-            }
-
-            const towers = this._callbacks.findEntities<Tower>((entity) => entity instanceof Tower);
-            for (const tower of towers) {
-                tower.setWarpMode();
             }
 
             const moons = this._callbacks.findEntities<Moon>((entity) => entity instanceof Moon);

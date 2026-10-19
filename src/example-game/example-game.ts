@@ -3,7 +3,7 @@ import { Renderer } from '../renderer';
 import { MtlData, ObjData, parseMtl, parseObj, UVFlip } from "../obj-parser";
 
 import { Camera } from "./camera";
-import { EntityCallbacks, Entity, Player, CollisionManager, EnemySpawner, Tower, State, Moon } from "./entities";
+import { EntityCallbacks, Entity, Player, CollisionManager, EnemySpawner, State, Moon } from "./entities";
 import { Vector3 } from '../math';
 import { GUI } from './gui';
 
@@ -42,10 +42,6 @@ const LEVEL_1_METADATA: LevelMetadata = {
             mtl: null,
         },
         {
-            obj: "assets/models/tower.obj",
-            mtl: null,
-        },
-        {
             obj: "assets/models/moon.obj",
             mtl: null,
         },
@@ -54,10 +50,9 @@ const LEVEL_1_METADATA: LevelMetadata = {
         "assets/models/f22.png",
         "assets/models/jet.png",
         "assets/models/explosion.png",
-        "assets/models/tower.png",
         "assets/models/moon.png",
     ],
-    entities: [Player, Tower, EnemySpawner, CollisionManager, State, Moon],
+    entities: [Player, EnemySpawner, CollisionManager, State, Moon],
 } as const;
 
 export class ExampleGame {
