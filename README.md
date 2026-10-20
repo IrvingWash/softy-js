@@ -125,3 +125,15 @@ function loadTexture(raw: string): ImageData {
 
 ## What's not ported from the origina project
 - Clipping
+
+## Building and running
+
+- Clone the repo
+- Install typescript and vite:
+```bash
+npm i 
+```
+- Run:
+```bash
+npx vite
+```
